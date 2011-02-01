@@ -2614,11 +2614,6 @@ class phunction_Unicode extends phunction
 		return $string;
 	}
 
-	public static function strcasecmp($string, $search)
-	{
-		return strcmp(self::strtolower($string), self::strtolower($search));
-	}
-
 	public static function stripos($string, $search, $offset = 0)
 	{
 		$string = self::substr($string, $offset);
@@ -2647,16 +2642,6 @@ class phunction_Unicode extends phunction
 	public static function strlen($string)
 	{
 		return strlen(utf8_decode($string));
-	}
-
-	public static function strncasecmp($string, $search, $length = null)
-	{
-		return self::strncmp(self::strtolower($string), self::strtolower($search), $length);
-	}
-
-	public static function strncmp($string, $search, $length = null)
-	{
-		return strcmp(self::substr($string, 0, intval($length)), self::substr($search, 0, intval($length)));
 	}
 
 	public static function strpos($string, $search, $offset = 0)
