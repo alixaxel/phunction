@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.2.1 (github.com/alixaxel/phunction/)
+* phunction 1.2.9 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -401,31 +401,28 @@ class phunction
 		return $array;
 	}
 
-	public static function Tag($tag, $content = null, $attributes = null)
+	public static function Tag($tag, $content = null)
 	{
-		if (is_array($attributes) === true)
+		$tag = htmlspecialchars(strtolower(trim($tag)));
+		$arguments = array_filter(array_slice(func_get_args(), 2), 'is_array');
+		$attributes = (empty($arguments) === true) ? array() : call_user_func_array('array_merge', $arguments);
+
+		if (count($attributes) > 0)
 		{
 			ksort($attributes);
 
 			foreach ($attributes as $key => $value)
 			{
-				if (is_bool($value) === true)
-				{
-					$value = ($value === true) ? $key : null;
-				}
-
-				$attributes[$key] = sprintf(' %s="%s"', htmlspecialchars($key), htmlspecialchars($value));
+				$attributes[$key] = sprintf(' %s="%s"', htmlspecialchars($key), ($value === true) ? htmlspecialchars($key) : htmlspecialchars($value));
 			}
-
-			$attributes = str_replace('=""', '', implode('', $attributes));
 		}
 
 		if (in_array($tag, array('br', 'hr', 'img', 'input', 'link', 'meta')) === true)
 		{
-			return sprintf('<%s%s />', $tag, $attributes) . "\n";
+			return sprintf('<%s%s />', $tag, implode('', $attributes)) . "\n";
 		}
 
-		return sprintf('<%s%s>%s</%s>', $tag, $attributes, htmlspecialchars($content), $tag) . "\n";
+		return sprintf('<%s%s>%s</%s>', $tag, implode('', $attributes), htmlspecialchars($content), $tag) . "\n";
 	}
 
 	public static function Text($single, $plural = null, $number = null, $domain = null, $path = null)
@@ -558,6 +555,10 @@ class phunction
 
 class phunction_Date extends phunction
 {
+	public function __construct()
+	{
+	}
+
 	public static function Age($date = 'now')
 	{
 		$date = parent::Date('Ymd', $date);
@@ -729,6 +730,10 @@ class phunction_Date extends phunction
 
 class phunction_Disk extends phunction
 {
+	public function __construct()
+	{
+	}
+
 	public static function Chmod($path, $chmod = null)
 	{
 		if (file_exists($path) === true)
@@ -1114,6 +1119,10 @@ class phunction_Disk extends phunction
 
 class phunction_HTTP extends phunction
 {
+	public function __construct()
+	{
+	}
+
 	public static function Cookie($key, $value = null, $expire = null)
 	{
 		if (isset($value) === true)
@@ -1189,9 +1198,9 @@ class phunction_HTTP extends phunction
 		return parent::Value($_SERVER, 'REMOTE_ADDR', '127.0.0.1');
 	}
 
-	public static function Method($http, $ajax = false)
+	public static function Method($method, $ajax = false)
 	{
-		if (in_array(parent::Value($_SERVER, 'REQUEST_METHOD', 'GET'), array_map('strtoupper', (array) $http)) === true)
+		if (in_array(parent::Value($_SERVER, 'REQUEST_METHOD', 'GET'), array_map('strtoupper', (array) $method)) === true)
 		{
 			if ($ajax === true)
 			{
@@ -1246,6 +1255,10 @@ class phunction_HTTP extends phunction
 
 class phunction_Is extends phunction
 {
+	public function __construct()
+	{
+	}
+
 	public static function ASCII($value)
 	{
 		return (bool) filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[\x20-\x7E]*$~')));
@@ -1309,6 +1322,10 @@ class phunction_Is extends phunction
 
 class phunction_Math extends phunction
 {
+	public function __construct()
+	{
+	}
+
 	public static function Average()
 	{
 		$result = 0;
@@ -1607,6 +1624,10 @@ class phunction_Math extends phunction
 
 class phunction_Net extends phunction
 {
+	public function __construct()
+	{
+	}
+
 	public static function Captcha($value = null, $background = null)
 	{
 		if (strlen(session_id()) > 0)
@@ -2184,6 +2205,10 @@ class phunction_Net extends phunction
 
 class phunction_Text extends phunction
 {
+	public function __construct()
+	{
+	}
+
 	public static function Comify($array, $last = ' and ')
 	{
 		$array = array_filter(array_unique((array) $array), 'strlen');
@@ -2408,13 +2433,13 @@ class phunction_Text extends phunction
 		return $string;
 	}
 
-	public static function Title($string)
+	public static function Title($string, $raw = false)
 	{
 		if (ob_get_level() > 0)
 		{
 			if (preg_match('~<title>[^<]*</title>~i', ob_get_contents()) > 0)
 			{
-				echo preg_replace('~<title>[^<]*</title>~i', '<title>' . addcslashes($string, '\\$') . '</title>', ob_get_clean(), 1);
+				echo preg_replace('~<title>[^<]*</title>~i', '<title>' . (($raw === true) ? $string : addcslashes($string, '\\$')) . '</title>', ob_get_clean(), 1);
 			}
 		}
 
@@ -2446,6 +2471,10 @@ class phunction_Text extends phunction
 
 class phunction_Unicode extends phunction
 {
+	public function __construct()
+	{
+	}
+
 	public static function chr($string)
 	{
 		return html_entity_decode('&#' . $string . ';', ENT_QUOTES, 'UTF-8');
