@@ -2203,6 +2203,61 @@ class phunction_Net extends phunction
 	}
 }
 
+class phunction_Tag extends phunction
+{
+	public function __construct()
+	{
+	}
+
+	public static function Checkbox($id, $value, $default = null)
+	{
+		$result = array('type' => 'checkbox', 'name' => $id, 'value' => $value);
+
+		if (in_array($value, (array) parent::Value($_REQUEST, str_replace('[]', '', $id), $default)) === true)
+		{
+			$result['checked'] = true;
+		}
+
+		return $result;
+	}
+
+	public static function Input($id, $default = null, $type = 'text')
+	{
+		$result = array('type' => $type, 'name' => $id, 'value' => $default);
+
+		if (array_key_exists($id, $_REQUEST) === true)
+		{
+			$result['value'] = htmlspecialchars_decode(parent::Value($_REQUEST, $id));
+		}
+
+		return $result;
+	}
+
+	public static function Option($id, $value = null, $default = null)
+	{
+		$result = array('value' => $value);
+
+		if (in_array($value, (array) parent::Value($_REQUEST, str_replace('[]', '', $id), $default)) === true)
+		{
+			$result['selected'] = true;
+		}
+
+		return $result;
+	}
+
+	public static function Radio($id, $value, $default = null)
+	{
+		$result = array('type' => 'radio', 'name' => $id, 'value' => $value);
+
+		if (in_array($value, (array) parent::Value($_REQUEST, str_replace('[]', '', $id), $default)) === true)
+		{
+			$result['checked'] = true;
+		}
+
+		return $result;
+	}
+}
+
 class phunction_Text extends phunction
 {
 	public function __construct()
