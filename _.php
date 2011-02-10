@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.2.9 (github.com/alixaxel/phunction/)
+* phunction 1.2.10 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -520,7 +520,7 @@ class phunction
 					$data = get_object_vars($data);
 				}
 
-				if (array_key_exists($value, (array) $data) !== true)
+				if ((is_array($data) !== true) || (array_key_exists($value, $data) !== true))
 				{
 					return $default;
 				}
@@ -754,7 +754,7 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Download($path, $speed = null)
+	public static function Download($path, $speed = null, $partial = true)
 	{
 		if (is_file($path) === true)
 		{
