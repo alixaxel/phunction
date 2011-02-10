@@ -728,6 +728,102 @@ class phunction_Date extends phunction
 	}
 }
 
+class phunction_DB extends phunction
+{
+	public function __construct()
+	{
+	}
+
+	public static function Get($table, $id = null)
+	{
+		if (is_object(parent::DB()) === true)
+		{
+			if (isset($id) === true)
+			{
+				if (is_array($id) !== true)
+				{
+					$id = array('id' => $id);
+				}
+
+				foreach ($id as $key => $value)
+				{
+					$id[$key] = sprintf('%s LIKE %s', $key, parent::DB()->quote($value));
+				}
+
+				$data = parent::DB(sprintf('SELECT * FROM %s WHERE %s;', $table, implode(' AND ', $id)));
+			}
+
+			else if (is_null($id) === true)
+			{
+				$data = parent::DB(sprintf('SELECT * FROM %s;', $table));
+			}
+
+			if (is_array($data) === true)
+			{
+				foreach ($data as $cursor => $result)
+				{
+					foreach ($result as $key => $value)
+					{
+						if (strncmp('id_', $key, 3) === 0)
+						{
+							$data[$cursor][$key] = parent::Value(parent::DB(sprintf('SELECT * FROM %s WHERE id LIKE ? LIMIT 1;', substr($key, 3)), $value), 0, $value);
+						}
+					}
+				}
+
+				return $data;
+			}
+		}
+
+		return false;
+	}
+
+	public static function Set($table, $id = null, $data = null)
+	{
+		if (is_object(parent::DB()) === true)
+		{
+			$data = (array) $data;
+
+			if (isset($id) === true)
+			{
+				if (is_array($id) !== true)
+				{
+					$id = array('id' => $id);
+				}
+
+				foreach ($id as $key => $value)
+				{
+					$id[$key] = sprintf('%s LIKE %s', $key, parent::DB()->quote($value));
+				}
+
+				if (count($data) > 0)
+				{
+					foreach ($data as $key => $value)
+					{
+						$data[$key] = sprintf('%s = %s', $key, parent::DB()->quote($value));
+					}
+
+					return parent::DB(sprintf('UPDATE %s SET %s WHERE %s;', $table, implode(', ', $data), implode(' AND ', $id)));
+				}
+
+				return parent::DB(sprintf('DELETE FROM %s WHERE %s;', $table, implode(' AND ', $id)));
+			}
+
+			else if (is_null($id) === true)
+			{
+				foreach ($data as $key => $value)
+				{
+					$data[$key] = ph()->DB()->quote($value);
+				}
+
+				return parent::DB(sprintf('INSERT INTO %s (%s) VALUES (%s);', $table, implode(', ', array_keys($data)), implode(', ', $data)));
+			}
+		}
+
+		return false;
+	}
+}
+
 class phunction_Disk extends phunction
 {
 	public function __construct()
@@ -754,7 +850,7 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Download($path, $speed = null, $partial = true)
+	public static function Download($path, $speed = null)
 	{
 		if (is_file($path) === true)
 		{
