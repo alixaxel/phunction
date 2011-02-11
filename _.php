@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.2.10 (github.com/alixaxel/phunction/)
+* phunction 1.2.11 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -294,6 +294,34 @@ class phunction
 		}
 
 		return ($required === true) ? false : null;
+	}
+
+	public static function Mongo($query = null)
+	{
+		static $db = array();
+
+		if (extension_loaded('mongo') === true)
+		{
+			if (isset($db[self::$id], $query) === true)
+			{
+				if (is_a($db[self::$id], 'MongoDB') === true)
+				{
+					return $result->selectCollection($query);
+				}
+
+				else if (is_a($db[self::$id], 'Mongo') === true)
+				{
+					$db[self::$id] = $db[self::$id]->selectDB($query);
+				}
+			}
+
+			else if (preg_match('~^mongodb:~', $query) > 0)
+			{
+				$db[self::$id] = new Mongo($query, array('connect' => true));
+			}
+		}
+
+		return (isset($db[self::$id]) === true) ? $db[self::$id] : false;
 	}
 
 	public static function Object($object)
@@ -2242,6 +2270,25 @@ class phunction_Net extends phunction
 		}
 
 		return false;
+	}
+
+	public static function VIES($vatin, $country)
+	{
+		$data = array('BtnSubmitVat' => 'Verify');
+
+		foreach (array('iso', 'ms', 'vat') as $value)
+		{
+			$data[$value] = $vatin;
+			$data['requester' . ucfirst($value)] = $vatin;
+
+			if (strcmp('vat', $value) !== 0)
+			{
+				$data[$value] = $country;
+				$data['requester' . ucfirst($value)] = $country;
+			}
+		}
+
+		return (strpos(ph()->Net->CURL('http://ec.europa.eu/taxation_customs/vies/viesquer.do', $data, 'POST'), 'Yes, valid VAT number') !== false) ? true : false;
 	}
 
 	public static function Weather($query)
