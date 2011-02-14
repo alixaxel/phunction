@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.2.11 (github.com/alixaxel/phunction/)
+* phunction 1.2.14 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -84,17 +84,7 @@ class phunction
 				apc_store($key, $value, intval($ttl));
 			}
 
-			return (apc_exists($key) === true) ? apc_fetch($key) : false;
-		}
-
-		else if (extension_loaded('xcache') === true)
-		{
-			if (isset($value) === true)
-			{
-				xcache_set($key, $value, intval($ttl));
-			}
-
-			return (xcache_isset($key) === true) ? xcache_get($key) : false;
+			return apc_fetch($key);
 		}
 
 		return (isset($value) === true) ? $value : false;
@@ -160,9 +150,9 @@ class phunction
 						return $result[self::$id][$hash]->rowCount();
 					}
 
-					else if (preg_match('~^(?:SELECT|EXPLAIN|SHOW|PRAGMA)\b~i', $query) > 0)
+					else if (preg_match('~^(?:SELECT|SHOW|EXPLAIN|DESC(?:RIBE)?|PRAGMA)\b~i', $query) > 0)
 					{
-						return $result[self::$id][$hash]->fetchAll(PDO::FETCH_ASSOC);
+						return $result[self::$id][$hash]->fetchAll(PDO::FETCH_OBJ);
 					}
 
 					return true;
@@ -172,14 +162,22 @@ class phunction
 			return false;
 		}
 
-		else if (preg_match('~^(?:mysql|pgsql):~', $query) > 0)
+		else if (preg_match('~^(?:mysql|pgsql):~i', $query) > 0)
 		{
-			$db[self::$id] = new PDO(preg_replace('~^([^:]+):/{0,2}([^:/]+)(?::(\d+))?/(\w+)/?$~', '$1:host=$2;port=$3;dbname=$4', $query), func_get_arg(1), func_get_arg(2));
-
-			if (preg_match('~^mysql:~', $query) > 0)
+			try
 			{
-				self::DB(self::$id, 'SET time_zone = ?;', date_default_timezone_get());
-				self::DB(self::$id, 'SET NAMES ? COLLATE ?;', 'utf8', 'utf8_unicode_ci');
+				$db[self::$id] = new PDO(preg_replace('~^([^:]+):/{0,2}([^:/]+)(?::(\d+))?/(\w+)/?$~', '$1:host=$2;port=$3;dbname=$4', $query), @func_get_arg(1), @func_get_arg(2));
+
+				if (strcmp('mysql', $db[self::$id]->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
+				{
+					self::DB(self::$id, 'SET time_zone = ?;', date_default_timezone_get());
+					self::DB(self::$id, 'SET NAMES ? COLLATE ?;', 'utf8', 'utf8_unicode_ci');
+				}
+			}
+
+			catch (PDOException $e)
+			{
+				return false;
 			}
 		}
 
@@ -500,38 +498,27 @@ class phunction
 		return $single;
 	}
 
-	public static function Throttle($ttl = 60, $exit = 60, $count = 1)
+	public static function Throttle($ttl = 60, $exit = 60, $count = 1, $proxy = false)
 	{
-		$ip = ph()->HTTP->IP();
+		$ip = ph()->HTTP->IP(null, $proxy);
 
-		if ($ip !== false)
+		if (extension_loaded('apc') === true)
 		{
-			$key = array(__METHOD__, ip2long($ip));
+			$key = array(__METHOD__, $ip, $proxy);
 
-			if (extension_loaded('apc') === true)
+			if (apc_exists(vsprintf('%s:%s:%b', $key)) !== true)
 			{
-				if (apc_exists(vsprintf('%s:%u', $key)) !== true)
-				{
-					apc_store(vsprintf('%s:%u', $key), 0, $ttl);
-				}
-
-				$result = apc_inc(vsprintf('%s:%u', $key), intval($count));
+				apc_store(vsprintf('%s:%s:%b', $key), 0, $ttl);
 			}
 
-			else if (extension_loaded('xcache') === true)
-			{
-				if (xcache_isset(vsprintf('%s:%u', $key)) !== true)
-				{
-					xcache_set(vsprintf('%s:%u', $key), 0, $ttl);
-				}
+			$result = apc_inc(vsprintf('%s:%s:%b', $key), intval($count));
 
-				$result = xcache_inc(vsprintf('%s:%u', $key), intval($count));
+			if ($result < $exit)
+			{
+				return ($result / $ttl);
 			}
 
-			if (isset($result) === true)
-			{
-				return ($result < $exit) ? ($result / $ttl) : true;
-			}
+			return true;
 		}
 
 		return false;
@@ -777,14 +764,9 @@ class phunction_DB extends phunction
 				{
 					$id[$key] = sprintf('%s LIKE %s', $key, parent::DB()->quote($value));
 				}
-
-				$data = parent::DB(sprintf('SELECT * FROM %s WHERE %s;', $table, implode(' AND ', $id)));
 			}
 
-			else if (is_null($id) === true)
-			{
-				$data = parent::DB(sprintf('SELECT * FROM %s;', $table));
-			}
+			$data = parent::DB(sprintf('SELECT * FROM %s%s;', $table, (count($id) > 0) ? (' WHERE ' . implode(' AND ', $id)) : ''));
 
 			if (is_array($data) === true)
 			{
@@ -794,7 +776,7 @@ class phunction_DB extends phunction
 					{
 						if (strncmp('id_', $key, 3) === 0)
 						{
-							$data[$cursor][$key] = parent::Value(parent::DB(sprintf('SELECT * FROM %s WHERE id LIKE ? LIMIT 1;', substr($key, 3)), $value), 0, $value);
+							$data[$cursor]->$key = parent::Value(parent::DB(sprintf('SELECT * FROM %s WHERE id LIKE ? LIMIT 1;', substr($key, 3)), $value), 0, $value);
 						}
 					}
 				}
@@ -841,10 +823,10 @@ class phunction_DB extends phunction
 			{
 				foreach ($data as $key => $value)
 				{
-					$data[$key] = ph()->DB()->quote($value);
+					$data[$key] = parent::DB()->quote($value);
 				}
 
-				return parent::DB(sprintf('INSERT INTO %s (%s) VALUES (%s);', $table, implode(', ', array_keys($data)), implode(', ', $data)));
+				return parent::DB(sprintf('REPLACE INTO %s (%s) VALUES (%s);', $table, implode(', ', array_keys($data)), implode(', ', $data)));
 			}
 		}
 
@@ -1489,7 +1471,7 @@ class phunction_Math extends phunction
 				{
 					$result = $charset[$number % $output];
 
-					while (($number = intval($number / $output)) > 0)
+					while (($number = floor($number / $output)) > 0)
 					{
 						$result = $charset[$number % $output] . $result;
 					}
@@ -1610,6 +1592,28 @@ class phunction_Math extends phunction
 		return false;
 	}
 
+	public static function Factor($number)
+	{
+		$result = array();
+
+		for ($i = 2; $i <= $number; ++$i)
+		{
+			while ($number % $i == 0)
+			{
+				$number /= $i;
+
+				if (array_key_exists($i, $result) !== true)
+				{
+					$result[$i] = 0;
+				}
+
+				++$result[$i];
+			}
+		}
+
+		return $result;
+	}
+
 	public static function ifMB($id, $reference, $amount = 0.00, $entity = 10559)
 	{
 		$stack = 0;
@@ -1703,7 +1707,7 @@ class phunction_Math extends phunction
 			$data = array_map('abs', $data);
 			$number = min(max(1, abs($number)), count($data));
 
-			while ($number-- > 0)
+			while (--$number >= 0)
 			{
 				$chance = 0;
 				$probability = mt_rand(1, array_sum($data));
@@ -1721,6 +1725,39 @@ class phunction_Math extends phunction
 		}
 
 		return $result;
+	}
+
+	public static function Regression($data, $number = null)
+	{
+		$n = count($data);
+		$sum = array_fill(0, 4, 0);
+
+		if (is_array($data) === true)
+		{
+			foreach ($data as $key => $value)
+			{
+				$sum[0] += $key;
+				$sum[1] += $value;
+				$sum[2] += $key * $key;
+				$sum[3] += $key * $value;
+			}
+
+			if (($result = $n * $sum[2] - pow($sum[0], 2)) != 0)
+			{
+				$result = ($n * $sum[3] - $sum[0] * $sum[1]) / $result;
+			}
+
+			$result = array('m' => $result, 'b' => ($sum[1] - $result * $sum[0]) / $n);
+
+			if (isset($number) === true)
+			{
+				return floatval($number) * $result['m'] + $result['b'];
+			}
+
+			return $result;
+		}
+
+		return false;
 	}
 
 	public static function Relative()
@@ -1933,7 +1970,12 @@ class phunction_Net extends phunction
 
 			foreach (array('from', 'to', 'cc', 'bcc') as $email)
 			{
-				$$email = array_filter(filter_var_array(preg_replace('~\s|[<>]|%0[ab]|[[:cntrl:]]~i', '', (is_array($$email) === true) ? $$email : explode(',', $$email)), FILTER_VALIDATE_EMAIL));
+				if (is_array($$email) !== true)
+				{
+					$$email = explode(',', $$email);
+				}
+
+				$$email = array_filter(filter_var_array(preg_replace('~\s|[<>]|%0[ab]|[[:cntrl:]]~i', '', $$email), FILTER_VALIDATE_EMAIL));
 
 				if (count($$email) > 0)
 				{
@@ -1961,7 +2003,7 @@ class phunction_Net extends phunction
 				$header['Return-Path'] = sprintf('<%s>', implode('', array_slice($from, 0, 1)));
 				$header['Content-Type'] = sprintf('multipart/alternative; boundary="%s"', $boundary);
 
-				if ((count($to) + count($cc) + count($bcc)) == 1)
+				if (array_sum(array(count($to), count($cc), count($bcc))) == 1)
 				{
 					$count = 0;
 					$hashcash = sprintf('1:20:%u:%s::%s:', parent::Date('ymd'), parent::Coalesce($to, $cc, $bcc), mt_rand());
@@ -1983,11 +2025,20 @@ class phunction_Net extends phunction
 
 					else if ($key == 'plain')
 					{
-						$value = preg_replace('~<br[^>]*>~i', "\n", strip_tags(preg_replace('~.*<body(?:\s[^>]*)?>(.+?)</body>.*~is', '$1', $value), '<a><p><br><li>'));
+						$value = strip_tags(preg_replace('~.*<body(?:\s[^>]*)?>(.+?)</body>.*~is', '$1', $value), '<a><p><br><li>');
 
 						if (preg_match('~</?[a-z][^>]*>~i', $value) > 0)
 						{
-							$value = strip_tags(preg_replace(array('~<a[^>]+?href="(.+?)"[^>]*>(.+?)</a>~is', '~<p[^>]*>(.+?)</p>~is', '~<li[^>]*>(.+?)</li>~is'), array('$2 ($1)', "\n\n$1\n\n", "\n - $1"), $value));
+							$tags = array
+							(
+								'~<a[^>]+?href="([^"]+)"[^>]*>(.+?)</a>~is' => '$2 ($1)',
+								'~<p[^>]*>(.+?)</p>~is' => "\n\n$1\n\n",
+								'~<br[^>]*>~i' => "\n",
+								'~<li[^>]*>(.+?)</li>~is' => "\n - $1",
+								'~\n{3,}~' => "\n\n",
+							);
+
+							$value = strip_tags(preg_replace(array_keys($tags), $tags, $value));
 						}
 
 						$value = implode("\n", array_map('imap_8bit', explode("\n", preg_replace('~\n{3,}~', "\n\n", trim($value)))));
@@ -1995,8 +2046,10 @@ class phunction_Net extends phunction
 
 					$value = array
 					(
-						sprintf('Content-Type: text/%s; charset=utf-8', $key), 'Content-Disposition: inline',
-						sprintf('Content-Transfer-Encoding: %s', ($key == 'html') ? 'base64' : 'quoted-printable'), '', $value, '',
+						sprintf('Content-Type: text/%s; charset=utf-8', $key),
+						'Content-Disposition: inline',
+						sprintf('Content-Transfer-Encoding: %s', ($key == 'html') ? 'base64' : 'quoted-printable'),
+						'', $value, '',
 					);
 
 					$content = array_merge($content, array('--' . $boundary), $value);
@@ -2024,8 +2077,10 @@ class phunction_Net extends phunction
 
 							$value = array
 							(
-								sprintf('Content-Type: application/octet-stream; name="%s"', $key),	sprintf('Content-Disposition: attachment; filename="%s"', $key),
-								'Content-Transfer-Encoding: base64', '', trim(imap_binary(file_get_contents($value))), '',
+								sprintf('Content-Type: application/octet-stream; name="%s"', $key),
+								sprintf('Content-Disposition: attachment; filename="%s"', $key),
+								'Content-Transfer-Encoding: base64',
+								'', trim(imap_binary(file_get_contents($value))), '',
 							);
 
 							$content = array_merge($content, array('--' . $boundary), $value);
@@ -2134,20 +2189,26 @@ class phunction_Net extends phunction
 	public static function GeoIP($ip = null, $proxy = false, $ttl = 86400)
 	{
 		$ip = ph()->HTTP->IP($ip, $proxy);
-		$key = array(__METHOD__, $ip, $proxy);
-		$result = parent::Cache(vsprintf('%s:%s:%b', $key));
 
-		if ($result === false)
+		if (extension_loaded('geoip') !== true)
 		{
-			$result = self::CURL('http://ipinfodb.com/ip_query_country.php?ip=' . $ip);
+			$key = array(__METHOD__, $ip, $proxy);
+			$result = parent::Cache(vsprintf('%s:%s:%b', $key));
 
-			if ($result !== false)
+			if ($result === false)
 			{
-				$result = parent::Cache(vsprintf('%s:%s:%b', $key), strval(self::XML($result, '//response/countrycode', 0)), $ttl);
+				$result = self::CURL('http://api.wipmania.com/' . $ip);
+
+				if ($result !== false)
+				{
+					$result = parent::Cache(vsprintf('%s:%s:%b', $key), trim($result), $ttl);
+				}
 			}
+
+			return $result;
 		}
 
-		return $result;
+		return (geoip_db_avail(GEOIP_COUNTRY_EDITION) === true) ? geoip_country_code_by_name($ip) : false;
 	}
 
 	public static function Online()
@@ -2274,32 +2335,45 @@ class phunction_Net extends phunction
 
 	public static function VIES($vatin, $country)
 	{
-		$data = array('BtnSubmitVat' => 'Verify');
+		$vatin = str_replace(' ', '', $vatin);
 
-		foreach (array('iso', 'ms', 'vat') as $value)
+		if (preg_match('~^[0-9A-Z]{2,12}$~i', $vatin) > 0)
 		{
-			$data[$value] = $vatin;
-			$data['requester' . ucfirst($value)] = $vatin;
-
-			if (strcmp('vat', $value) !== 0)
+			if (preg_match('~^(?:AT|BE|BG|CY|CZ|DE|DK|EE|EL|ES|FI|FR|GB|HU|IE|IT|LT|LU|LV|MT|NL|PL|PT|RO|SE|SI|SK)$~i', $country) > 0)
 			{
-				$data[$value] = $country;
-				$data['requester' . ucfirst($value)] = $country;
+				$data = array();
+
+				foreach (array('ms', 'iso', 'vat') as $value)
+				{
+					$data[$value] = strtoupper($vatin);
+					$data['requester' . ucfirst($value)] = strtoupper($vatin);
+
+					if (strcmp('vat', $value) !== 0)
+					{
+						$data[$value] = strtoupper($country);
+						$data['requester' . ucfirst($value)] = strtoupper($country);
+					}
+				}
+
+				if (strpos(self::CURL('http://ec.europa.eu/taxation_customs/vies/viesquer.do', $data, 'POST'), 'Yes, valid VAT number') !== false)
+				{
+					return sprintf('%s %s', strtoupper($country), strtoupper($vatin));
+				}
 			}
 		}
 
-		return (strpos(ph()->Net->CURL('http://ec.europa.eu/taxation_customs/vies/viesquer.do', $data, 'POST'), 'Yes, valid VAT number') !== false) ? true : false;
+		return false;
 	}
 
 	public static function Weather($query)
 	{
-		$weather = ph()->Net->XML(self::CURL('http://www.google.com/ig/api?weather=' . urlencode($query)));
+		$weather = self::XML(self::CURL('http://www.google.com/ig/api?weather=' . urlencode($query)));
 
 		if ($weather !== false)
 		{
 			$result = array();
 
-			foreach (ph()->Net->XML($weather, '//forecast_conditions') as $key => $value)
+			foreach (self::XML($weather, '//forecast_conditions') as $key => $value)
 			{
 				$result[$key] = array(strval($value->low['data']), strval($value->high['data']));
 			}
@@ -2352,7 +2426,7 @@ class phunction_Tag extends phunction
 	{
 	}
 
-	public static function Checkbox($id, $value, $default = null)
+	public static function Checkbox($id, $value = null, $default = null)
 	{
 		$result = array('type' => 'checkbox', 'name' => $id, 'value' => $value);
 
@@ -2388,7 +2462,7 @@ class phunction_Tag extends phunction
 		return $result;
 	}
 
-	public static function Radio($id, $value, $default = null)
+	public static function Radio($id, $value = null, $default = null)
 	{
 		$result = array('type' => 'radio', 'name' => $id, 'value' => $value);
 
