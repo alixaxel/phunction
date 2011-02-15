@@ -2956,7 +2956,7 @@ function ph($ph = null)
 
 	if (is_object($result) === true)
 	{
-		$result::$id = strval($ph);
+		phunction::$id = strval($ph);
 	}
 
 	return $result;
