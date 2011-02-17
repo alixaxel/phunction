@@ -42,7 +42,7 @@ class phunction
 			set_magic_quotes_runtime(false);
 		}
 
-		else if ((get_magic_quotes_gpc() === 1) && (version_compare(PHP_VERSION, '6.0.0', '<') === true))
+		else if ((version_compare(PHP_VERSION, '6.0.0', '<') === true) && (get_magic_quotes_gpc() === 1))
 		{
 			$_GET = json_decode(stripslashes(json_encode($_GET, JSON_HEX_APOS | JSON_HEX_QUOT)), true);
 			$_POST = json_decode(stripslashes(json_encode($_POST, JSON_HEX_APOS | JSON_HEX_QUOT)), true);
@@ -747,6 +747,19 @@ class phunction_DB extends phunction
 {
 	public function __construct()
 	{
+	}
+
+	public static function _id()
+	{
+		static $result = array();
+
+		if (empty($result) === true)
+		{
+			$result['count'] = -1;
+			$result['server'] = base_convert(PHP_INT_MAX % (ip2long($_SERVER['SERVER_ADDR']) + getmypid()), 10, 36);
+		}
+
+		return sprintf('%06s%06s%04s', base_convert(time(), 10, 36), $result['server'], base_convert(++$result['count'] % 1679616, 10, 36));
 	}
 
 	public static function Get($table, $id = null)
@@ -1678,11 +1691,11 @@ class phunction_Math extends phunction
 
 	public static function Luhn($string, $encode = false)
 	{
-		$encode = intval($encode);
-
 		if ($encode > 0)
 		{
-			while ($encode-- >= 1)
+			$encode += 1;
+
+			while (--$encode > 0)
 			{
 				$result = 0;
 				$string = str_split(strrev($string), 1);
