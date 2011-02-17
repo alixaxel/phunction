@@ -465,7 +465,7 @@ class phunction
 				putenv(sprintf('%s=%s', $value, 'en_US'));
 			}
 
-			if (isset($path) === true)
+			if ((isset($path) === true) && (is_dir($path) === true))
 			{
 				$path = ph()->Disk->Path($path);
 
@@ -1108,35 +1108,65 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Mime($path, $magic = null)
+	public static function Map($path)
 	{
 		$path = self::Path($path);
 
 		if ($path !== false)
 		{
-			if (function_exists('finfo_open') === true)
+			if (is_dir($path) === true)
 			{
-				$finfo = finfo_open(FILEINFO_MIME_TYPE, $magic);
+				$result = glob(rtrim($path, '/') . '/*', GLOB_MARK);
+
+				foreach ($result as $key => $value)
+				{
+					$result[$key] = str_replace('\\', '/', $value);
+				}
+
+				return $result;
+			}
+
+			return array($path);
+		}
+
+		return false;
+	}
+
+	public static function Mime($path, $magic = null)
+	{
+		if (($path = self::Path($path)) !== false)
+		{
+			$result = false;
+
+			if (extension_loaded('fileinfo') === true)
+			{
+				$finfo = call_user_func_array('finfo_open', array_filter(array(FILEINFO_MIME, $magic)));
 
 				if (is_resource($finfo) === true)
 				{
-					$result = finfo_file($finfo, $path);
+					if (function_exists('finfo_file') === true)
+					{
+						$result = finfo_file($finfo, $path);
+					}
+
+					finfo_close($finfo);
+				}
+			}
+
+			if ($result === false)
+			{
+				if (function_exists('mime_content_type') === true)
+				{
+					$result = mime_content_type($path);
 				}
 
-				finfo_close($finfo);
+				else if (function_exists('exif_imagetype') === true)
+				{
+					$result = image_type_to_mime_type(exif_imagetype($path));
+				}
 			}
 
-			else if (function_exists('mime_content_type') === true)
-			{
-				$result = mime_content_type($path);
-			}
-
-			else if (function_exists('exif_imagetype') === true)
-			{
-				$result = image_type_to_mime_type(exif_imagetype($path));
-			}
-
-			return preg_replace('~^(.+);.+$~', '$1', $result);
+			return (empty($result) !== true) ? preg_replace('~^(.+);.+$~', '$1', $result) : false;
 		}
 
 		return false;
