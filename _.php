@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.2.14 (github.com/alixaxel/phunction/)
+* phunction 1.2.17 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -860,34 +860,72 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Download($path, $speed = null)
+	public static function Download($path, $speed = null, $multithread = false)
 	{
 		if (is_file($path) === true)
 		{
+			while (ob_get_level() > 0)
+			{
+				ob_end_clean();
+			}
+
 			$file = @fopen($path, 'rb');
-			$speed = (isset($speed) === true) ? round($speed * 1024) : 524288;
+			$size = sprintf('%u', filesize($path));
+			$speed = (empty($speed) === true) ? 1024 : floatval($speed);
 
 			if (is_resource($file) === true)
 			{
 				set_time_limit(0);
-				ignore_user_abort(false);
+				session_write_close();
 
-				while (ob_get_level() > 0)
+				if ($multithread === true)
 				{
-					ob_end_clean();
+					$range = array(0, $size - 1);
+
+					if (array_key_exists('HTTP_RANGE', $_SERVER) === true)
+					{
+						$range = array_map('intval', explode('-', preg_replace('~.*=([^,]*).*~', '$1', $_SERVER['HTTP_RANGE'])));
+
+						if (empty($range[1]) === true)
+						{
+							$range[1] = $size - 1;
+						}
+
+						foreach ($range as $key => $value)
+						{
+							$range[$key] = ph()->Math->Between($value, 0, $size - 1);
+						}
+
+						if (($range[0] > 0) || ($range[1] < ($size - 1)))
+						{
+							header('HTTP/1.1 206 Partial Content');
+						}
+					}
+
+					header('Accept-Ranges: bytes');
+					header('Content-Range: bytes ' . sprintf('%u-%u/%u', $range[0], $range[1], $size));
 				}
 
-				header('Expires: 0');
+				else
+				{
+					$range = array(0, $size - 1);
+				}
+
 				header('Pragma: public');
-				header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+				header('Cache-Control: public, no-cache');
 				header('Content-Type: application/octet-stream');
-				header('Content-Length: ' . sprintf('%u', filesize($path)));
+				header('Content-Length: ' . sprintf('%u', $range[1] - $range[0] + 1));
 				header('Content-Disposition: attachment; filename="' . basename($path) . '"');
 				header('Content-Transfer-Encoding: binary');
 
-				while (feof($file) !== true)
+				if ($range[0] > 0)
 				{
-					ph()->HTTP->Flush(fread($file, $speed));
+					fseek($file, $range[0]);
+				}
+
+				while ((feof($file) !== true) && (connection_status() === CONNECTION_NORMAL))
+				{
+					ph()->HTTP->Flush(fread($file, round($speed * 1024)));
 					ph()->HTTP->Sleep(1);
 				}
 
@@ -895,6 +933,11 @@ class phunction_Disk extends phunction
 			}
 
 			exit();
+		}
+
+		else
+		{
+			header('HTTP/1.1 404 Not Found');
 		}
 
 		return false;
@@ -1445,13 +1488,13 @@ class phunction_Math extends phunction
 		return ($result / max(1, count($arguments)));
 	}
 
-	public static function Base($number, $input, $output, $charset = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+	public static function Base($number, $input, $output, $charset = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&()*+,-./:;<=>?@[]^_`{|}~')
 	{
 		if (strlen($charset) >= 2)
 		{
 			$input = self::Between($input, 2, strlen($charset));
 			$output = self::Between($output, 2, strlen($charset));
-			$number = ltrim(preg_replace('~[^' . substr($charset, 0, $input) . ']+~', '', $number), $charset[0]);
+			$number = ltrim(preg_replace('~[^' . preg_quote(substr($charset, 0, $input), '~') . ']+~', '', $number), $charset[0]);
 
 			if (strlen($number) > 0)
 			{
@@ -1635,34 +1678,41 @@ class phunction_Math extends phunction
 
 	public static function Luhn($string, $encode = false)
 	{
-		if ($encode === true)
-		{
-			$result = 0;
-			$string = str_split(strrev($string), 1);
+		$encode = intval($encode);
 
-			foreach ($string as $key => $value)
+		if ($encode > 0)
+		{
+			while ($encode-- >= 1)
 			{
-				if ($key % 2 == 0)
+				$result = 0;
+				$string = str_split(strrev($string), 1);
+
+				foreach ($string as $key => $value)
 				{
-					$value = array_sum(str_split($value * 2, 1));
+					if ($key % 2 == 0)
+					{
+						$value = array_sum(str_split($value * 2, 1));
+					}
+
+					$result += $value;
 				}
 
-				$result += $value;
+				$result %= 10;
+
+				if ($result != 0)
+				{
+					$result -= 10;
+				}
+
+				$string = implode('', array_reverse($string)) . abs($result);
 			}
 
-			$result %= 10;
-
-			if ($result != 0)
-			{
-				$result -= 10;
-			}
-
-			return implode('', array_reverse($string)) . abs($result);
+			return $string;
 		}
 
-		else if ($string == self::Luhn(substr($string, 0, -1), true))
+		else if ($string == self::Luhn(substr($string, 0, max(1, abs($encode)) * -1), max(1, abs($encode))))
 		{
-			return substr($string, 0, -1);
+			return substr($string, 0, max(1, abs($encode)) * -1);
 		}
 
 		return false;
