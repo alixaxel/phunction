@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.2.17 (github.com/alixaxel/phunction/)
+* phunction 1.2.18 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1213,13 +1213,18 @@ class phunction_Disk extends phunction
 		return $result;
 	}
 
-	public static function Upload($input, $output, $chmod = null)
+	public static function Upload($input, $output, $mime = null, $magic = null, $chmod = null)
 	{
 		$result = array();
 		$output = self::Path($output);
 
 		if ((is_dir($output) === true) && (array_key_exists($input, $_FILES) === true))
 		{
+			if (isset($mime) === true)
+			{
+				$mime = implode('|', (array) $mime);
+			}
+
 			if (count($_FILES[$input], COUNT_RECURSIVE) == 5)
 			{
 				foreach ($_FILES[$input] as $key => $value)
@@ -1234,18 +1239,21 @@ class phunction_Disk extends phunction
 
 				if ($_FILES[$input]['error'][$key] == UPLOAD_ERR_OK)
 				{
-					$file = ph()->Text->Slug($value, '_', '.');
-
-					if (file_exists($output . $file) === true)
+					if (preg_match('~' . $mime . '~', self::Mime($_FILES[$input]['tmp_name'][$key], $magic)) > 0)
 					{
-						$file = substr_replace($file, '_' . md5_file($_FILES[$input]['tmp_name'][$key]), strrpos($value, '.'), 0);
-					}
+						$file = ph()->Text->Slug($value, '_', '.');
 
-					if (move_uploaded_file($_FILES[$input]['tmp_name'][$key], $output . $file) === true)
-					{
-						if (self::Chmod($output . $file, $chmod) === true)
+						if (file_exists($output . $file) === true)
 						{
-							$result[$value] = $output . $file;
+							$file = substr_replace($file, '_' . md5_file($_FILES[$input]['tmp_name'][$key]), strrpos($value, '.'), 0);
+						}
+
+						if (move_uploaded_file($_FILES[$input]['tmp_name'][$key], $output . $file) === true)
+						{
+							if (self::Chmod($output . $file, $chmod) === true)
+							{
+								$result[$value] = $output . $file;
+							}
 						}
 					}
 				}
