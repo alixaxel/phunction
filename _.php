@@ -1928,6 +1928,46 @@ class phunction_Net extends phunction
 		return false;
 	}
 
+	public static function Country($country = null, $language = 'en', $ttl = 604800)
+	{
+		$key = array(__FUNCTION__, $language);
+		$result = parent::Cache(vsprintf('%s:%s', $key));
+
+		if ($result === false)
+		{
+			$countries = self::CURL('http://www.geonames.org/countryInfoJSON?&lang=' . urlencode($language));
+
+			if ($countries !== false)
+			{
+				$countries = parent::Value(json_decode($countries, true), 'geonames');
+
+				if (is_array($countries) === true)
+				{
+					$result = array();
+
+					foreach ($countries as $value)
+					{
+						$result[$value['countryCode']] = $value['countryName'];
+					}
+
+					if (count($result) > 0)
+					{
+						array_multisort(array_map(array('phunction_Text', 'Collate'), $result), $result);
+					}
+
+					$result = parent::Cache(vsprintf('%s:%s', $key), $result, $ttl);
+				}
+			}
+		}
+
+		if ((isset($country) === true) && (is_array($result) === true))
+		{
+			return parent::Value($result, strtoupper($country));
+		}
+
+		return $result;
+	}
+
 	public static function CURL($url, $data = null, $method = 'GET', $options = null)
 	{
 		$result = false;
@@ -2436,30 +2476,13 @@ class phunction_Net extends phunction
 
 	public static function VIES($vatin, $country)
 	{
-		$vatin = str_replace(' ', '', $vatin);
-
-		if (preg_match('~^[0-9A-Z]{2,12}$~i', $vatin) > 0)
+		if ((preg_match('~[A-Z]{2}~', $country) > 0) && (preg_match('~[0-9A-Z.+*]{2,12}~', $vatin) > 0))
 		{
-			if (preg_match('~^(?:AT|BE|BG|CY|CZ|DE|DK|EE|EL|ES|FI|FR|GB|HU|IE|IT|LT|LU|LV|MT|NL|PL|PT|RO|SE|SI|SK)$~i', $country) > 0)
+			$soap = new SoapClient('http://ec.europa.eu/taxation_customs/vies/checkVatService.wsdl', array('exceptions' => false));
+
+			if (is_object($soap) === true)
 			{
-				$data = array();
-
-				foreach (array('ms', 'iso', 'vat') as $value)
-				{
-					$data[$value] = strtoupper($vatin);
-					$data['requester' . ucfirst($value)] = strtoupper($vatin);
-
-					if (strcmp('vat', $value) !== 0)
-					{
-						$data[$value] = strtoupper($country);
-						$data['requester' . ucfirst($value)] = strtoupper($country);
-					}
-				}
-
-				if (strpos(self::CURL('http://ec.europa.eu/taxation_customs/vies/viesquer.do', $data, 'POST'), 'Yes, valid VAT number') !== false)
-				{
-					return sprintf('%s %s', strtoupper($country), strtoupper($vatin));
-				}
+				return parent::Value($soap->__soapCall('checkVat', array(array('countryCode' => $country, 'vatNumber' => $vatin))), 'valid');
 			}
 		}
 
@@ -2580,6 +2603,11 @@ class phunction_Text extends phunction
 {
 	public function __construct()
 	{
+	}
+
+	public static function Collate($string)
+	{
+		return preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1' . chr(255) . '$2', htmlentities($string, ENT_QUOTES, 'UTF-8'));
 	}
 
 	public static function Comify($array, $last = ' and ')
