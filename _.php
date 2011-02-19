@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.2.18 (github.com/alixaxel/phunction/)
+* phunction 1.2.19 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -33,7 +33,7 @@ class phunction
 
 			else if (strlen(session_id()) == 0)
 			{
-				session_start();
+				@session_start();
 			}
 		}
 
@@ -1642,6 +1642,27 @@ class phunction_Math extends phunction
 		}
 
 		return false;
+	}
+
+	public static function Cloud($data, $minimum = null, $maximum = null)
+	{
+		$result = array();
+
+		if (is_array($data) === true)
+		{
+			if (count($data) > 0)
+			{
+				$data = array_map('abs', $data);
+				$regression = array(min($data) => $minimum, max($data) => $maximum);
+
+				foreach ($data as $key => $value)
+				{
+					$result[$key] = self::Regression($regression, $value);
+				}
+			}
+		}
+
+		return $result;
 	}
 
 	public static function Deviation()
