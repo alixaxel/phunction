@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.2.19 (github.com/alixaxel/phunction/)
+* phunction 1.2.24 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -152,7 +152,7 @@ class phunction
 
 					else if (preg_match('~^(?:SELECT|SHOW|EXPLAIN|DESC(?:RIBE)?|PRAGMA)\b~i', $query) > 0)
 					{
-						return $result[self::$id][$hash]->fetchAll(PDO::FETCH_OBJ);
+						return $result[self::$id][$hash]->fetchAll(PDO::FETCH_ASSOC);
 					}
 
 					return true;
@@ -415,16 +415,35 @@ class phunction
 		return self::Value($result, (is_int($key) === true) ? $key : (array_search($key, $result) + 1), $default);
 	}
 
-	public static function Sort($array, $unicode = true, $natural = true, $reverse = false)
+	public static function Sort($array, $reverse = false)
 	{
-		natcasesort($array);
-
-		if ($reverse === true)
+		if (is_array($array) === true)
 		{
-			$array = array_reverse($array, true);
+			if (extension_loaded('intl') === true)
+			{
+				if (is_object($collator = collator_create('root')) === true)
+				{
+					$collator->setAttribute(Collator::NUMERIC_COLLATION, Collator::ON);
+					$collator->asort($array);
+				}
+			}
+
+			else if (function_exists('array_multisort') === true)
+			{
+				$data = array();
+
+				foreach ($array as $key => $value)
+				{
+					$data[$key] = preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~', '$1' . chr(255) . '$2', strtolower(htmlentities($value, ENT_QUOTES, 'UTF-8')));
+				}
+
+				array_multisort(preg_replace('~([0-9]+)~e', "sprintf('%032d', '$1')", $data), $array);
+			}
+
+			return ($reverse === true) ? array_reverse($array, true) : $array;
 		}
 
-		return $array;
+		return false;
 	}
 
 	public static function Tag($tag, $content = null)
@@ -749,19 +768,6 @@ class phunction_DB extends phunction
 	{
 	}
 
-	public static function _id()
-	{
-		static $result = array();
-
-		if (empty($result) === true)
-		{
-			$result['count'] = -1;
-			$result['server'] = base_convert(PHP_INT_MAX % (ip2long($_SERVER['SERVER_ADDR']) + getmypid()), 10, 36);
-		}
-
-		return sprintf('%06s%06s%04s', base_convert(time(), 10, 36), $result['server'], base_convert(++$result['count'] % 1679616, 10, 36));
-	}
-
 	public static function Get($table, $id = null)
 	{
 		if (is_object(parent::DB()) === true)
@@ -789,7 +795,7 @@ class phunction_DB extends phunction
 					{
 						if (strncmp('id_', $key, 3) === 0)
 						{
-							$data[$cursor]->$key = parent::Value(parent::DB(sprintf('SELECT * FROM %s WHERE id LIKE ? LIMIT 1;', substr($key, 3)), $value), 0, $value);
+							$data[$cursor][$key] = parent::Value(parent::DB(sprintf('SELECT * FROM %s WHERE id LIKE ? LIMIT 1;', substr($key, 3)), $value), 0, $value);
 						}
 					}
 				}
@@ -1134,10 +1140,10 @@ class phunction_Disk extends phunction
 
 	public static function Mime($path, $magic = null)
 	{
+		$result = false;
+
 		if (($path = self::Path($path)) !== false)
 		{
-			$result = false;
-
 			if (extension_loaded('fileinfo') === true)
 			{
 				$finfo = call_user_func_array('finfo_open', array_filter(array(FILEINFO_MIME, $magic)));
@@ -1165,11 +1171,9 @@ class phunction_Disk extends phunction
 					$result = image_type_to_mime_type(exif_imagetype($path));
 				}
 			}
-
-			return (empty($result) !== true) ? preg_replace('~^(.+);.+$~', '$1', $result) : false;
 		}
 
-		return false;
+		return (empty($result) !== true) ? preg_replace('~^(.+);.+$~', '$1', $result) : false;
 	}
 
 	public static function Path($path)
@@ -1417,17 +1421,17 @@ class phunction_HTTP extends phunction
 	{
 		if (is_null($value) === true)
 		{
-			$result = self::Cookie(array(__FUNCTION__, $key));
+			$result = self::Cookie(array(__METHOD__, $key));
 
 			if ($result !== false)
 			{
-				self::Cookie(array(__FUNCTION__, $key), false);
+				self::Cookie(array(__METHOD__, $key), false);
 			}
 
 			return (is_bool($result) === true) ? $result : json_decode($result);
 		}
 
-		return self::Cookie(array(__FUNCTION__, $key), json_encode($value));
+		return self::Cookie(array(__METHOD__, $key), json_encode($value));
 	}
 
 	public static function Sleep($time = 1)
@@ -1539,7 +1543,7 @@ class phunction_Math extends phunction
 		return ($result / max(1, count($arguments)));
 	}
 
-	public static function Base($number, $input, $output, $charset = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&()*+,-./:;<=>?@[]^_`{|}~')
+	public static function Base($number, $input, $output, $charset = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 	{
 		if (strlen($charset) >= 2)
 		{
@@ -1648,17 +1652,14 @@ class phunction_Math extends phunction
 	{
 		$result = array();
 
-		if (is_array($data) === true)
+		if ((is_array($data) === true) && (count($data) > 0))
 		{
-			if (count($data) > 0)
-			{
-				$data = array_map('abs', $data);
-				$regression = array(min($data) => $minimum, max($data) => $maximum);
+			$data = array_map('abs', $data);
+			$regression = array(min($data) => $minimum, max($data) => $maximum);
 
-				foreach ($data as $key => $value)
-				{
-					$result[$key] = self::Regression($regression, $value);
-				}
+			foreach ($data as $key => $value)
+			{
+				$result[$key] = self::Regression($regression, $value);
 			}
 		}
 
@@ -1951,7 +1952,7 @@ class phunction_Net extends phunction
 
 	public static function Country($country = null, $language = 'en', $ttl = 604800)
 	{
-		$key = array(__FUNCTION__, $language);
+		$key = array(__METHOD__, $language);
 		$result = parent::Cache(vsprintf('%s:%s', $key));
 
 		if ($result === false)
@@ -1971,12 +1972,7 @@ class phunction_Net extends phunction
 						$result[$value['countryCode']] = $value['countryName'];
 					}
 
-					if (count($result) > 0)
-					{
-						array_multisort(array_map(array('phunction_Text', 'Collate'), $result), $result);
-					}
-
-					$result = parent::Cache(vsprintf('%s:%s', $key), $result, $ttl);
+					$result = parent::Cache(vsprintf('%s:%s', $key), parent::Sort($result), $ttl);
 				}
 			}
 		}
@@ -2406,55 +2402,58 @@ class phunction_Net extends phunction
 		$data = array();
 		$message = trim($message);
 
-		if (strlen($message) > 0)
+		if (isset($username, $password) === true)
 		{
-			$message = ph()->Text->Reduce($message, ' ');
+			$data['username'] = $username;
+			$data['password'] = $password;
 
-			if (preg_match('~[^\x20-\x7E]~', $message) > 0)
+			if (isset($to, $from, $message) === true)
 			{
-				$message = ph()->Text->Filter($message);
+				$message = ph()->Text->Reduce($message, ' ');
 
-				if ($unicode === true)
+				if (preg_match('~[^\x20-\x7E]~', $message) > 0)
 				{
-					$message = ph()->Unicode->str_split($message);
+					$message = ph()->Text->Filter($message);
 
-					foreach ($message as $key => $value)
+					if ($unicode === true)
 					{
-						$message[$key] = sprintf('%04x', ph()->Unicode->ord($value));
+						$message = ph()->Unicode->str_split($message);
+
+						foreach ($message as $key => $value)
+						{
+							$message[$key] = sprintf('%04x', ph()->Unicode->ord($value));
+						}
+
+						$message = implode('', $message);
 					}
 
-					$message = implode('', $message);
+					$message = ph()->Text->Unaccent($message);
 				}
 
-				$message = ph()->Text->Unaccent($message);
-			}
-
-			if (is_array($data) === true)
-			{
-				$data['to'] = $to;
-				$data['from'] = $from;
-				$data['type'] = (preg_match('^(?:[[:xdigit:]]{4})*$', $message) > 0);
-
-				if ($data['type'] === true)
+				if (is_array($data) === true)
 				{
-					$data['hex'] = $message;
+					$data['to'] = $to;
+					$data['from'] = $from;
+					$data['type'] = (preg_match('^(?:[[:xdigit:]]{4})*$', $message) > 0);
+
+					if ($data['type'] === true)
+					{
+						$data['hex'] = $message;
+					}
+
+					else if ($data['type'] === false)
+					{
+						$data['text'] = $message;
+					}
+
+					$data['type'] = intval($data['type']) + 1;
+					$data['maxconcat'] = '10';
 				}
 
-				else if ($data['type'] === false)
-				{
-					$data['text'] = $message;
-				}
-
-				$data['type'] = intval($data['type']) + 1;
-				$data['username'] = $username;
-				$data['password'] = $password;
-				$data['maxconcat'] = '10';
+				return (strpos(self::CURL('https://www.intellisoftware.co.uk/smsgateway/sendmsg.aspx', $data, 'POST'), 'ID:') !== false) ? true : false;
 			}
 
-			if (strpos(self::CURL('https://www.intellisoftware.co.uk/smsgateway/sendmsg.aspx', $data, 'POST'), 'ID:') !== false)
-			{
-				return true;
-			}
+			return intval(preg_replace('~^BALANCE:~', '', self::CURL('https://www.intellisoftware.co.uk/smsgateway/getbalance.aspx', $data, 'POST')));
 		}
 
 		return false;
@@ -2624,11 +2623,6 @@ class phunction_Text extends phunction
 {
 	public function __construct()
 	{
-	}
-
-	public static function Collate($string)
-	{
-		return preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1' . chr(255) . '$2', htmlentities($string, ENT_QUOTES, 'UTF-8'));
 	}
 
 	public static function Comify($array, $last = ' and ')
