@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.2.24 (github.com/alixaxel/phunction/)
+* phunction 1.3.17 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -28,7 +28,7 @@ class phunction
 
 			if (strncasecmp('www.', $_SERVER['HTTP_HOST'], 4) === 0)
 			{
-				self::Redirect(sprintf('%s://%s', getservbyport($_SERVER['SERVER_PORT'], 'tcp'), substr($_SERVER['HTTP_HOST'], 4) . $_SERVER['REQUEST_URI']), true);
+				self::Redirect(str_ireplace('://www.', '://', self::URL()), true);
 			}
 
 			else if (strlen(session_id()) == 0)
@@ -170,8 +170,8 @@ class phunction
 
 				if (strcmp('mysql', $db[self::$id]->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
 				{
-					self::DB(self::$id, 'SET time_zone = ?;', date_default_timezone_get());
-					self::DB(self::$id, 'SET NAMES ? COLLATE ?;', 'utf8', 'utf8_unicode_ci');
+					self::DB('SET time_zone = ?;', date_default_timezone_get());
+					self::DB('SET NAMES ? COLLATE ?;', 'utf8', 'utf8_unicode_ci');
 				}
 			}
 
@@ -251,15 +251,26 @@ class phunction
 		return $result;
 	}
 
-	public static function Flatten($array)
+	public static function Flatten($data, $key = null, $default = false)
 	{
 		$result = array();
 
-		if (is_array($array) === true)
+		if (is_array($data) === true)
 		{
-			foreach (new RecursiveIteratorIterator(new RecursiveArrayIterator($array)) as $value)
+			if (isset($key) === true)
 			{
-				$result[] = $value;
+				foreach ($data as $value)
+				{
+					$result[] = self::Value($value, $key, $default);
+				}
+			}
+
+			else if (is_null($index) === true)
+			{
+				foreach (new RecursiveIteratorIterator(new RecursiveArrayIterator($data)) as $value)
+				{
+					$result[] = $value;
+				}
 			}
 		}
 
@@ -302,12 +313,12 @@ class phunction
 		{
 			if (isset($db[self::$id], $query) === true)
 			{
-				if (is_a($db[self::$id], 'MongoDB') === true)
+				if (strcmp('MongoDB', get_class($db[self::$id])) === 0)
 				{
 					return $result->selectCollection($query);
 				}
 
-				else if (is_a($db[self::$id], 'Mongo') === true)
+				else if (strcmp('Mongo', get_class($db[self::$id])) === 0)
 				{
 					$db[self::$id] = $db[self::$id]->selectDB($query);
 				}
@@ -415,7 +426,7 @@ class phunction
 		return self::Value($result, (is_int($key) === true) ? $key : (array_search($key, $result) + 1), $default);
 	}
 
-	public static function Sort($array, $reverse = false)
+	public static function Sort($array, $natural = true, $reverse = false)
 	{
 		if (is_array($array) === true)
 		{
@@ -423,7 +434,11 @@ class phunction
 			{
 				if (is_object($collator = collator_create('root')) === true)
 				{
-					$collator->setAttribute(Collator::NUMERIC_COLLATION, Collator::ON);
+					if ($natural === true)
+					{
+						$collator->setAttribute(Collator::NUMERIC_COLLATION, Collator::ON);
+					}
+
 					$collator->asort($array);
 				}
 			}
@@ -434,10 +449,17 @@ class phunction
 
 				foreach ($array as $key => $value)
 				{
-					$data[$key] = preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~', '$1' . chr(255) . '$2', strtolower(htmlentities($value, ENT_QUOTES, 'UTF-8')));
+					$value = preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1' . chr(255) . '$2', htmlentities($value, ENT_QUOTES, 'UTF-8'));
+
+					if ($natural === true)
+					{
+						$value = preg_replace('~([0-9]+)~e', "sprintf('%032d', '$1')", $value);
+					}
+
+					$data[$key] = strtolower($value);
 				}
 
-				array_multisort(preg_replace('~([0-9]+)~e', "sprintf('%032d', '$1')", $data), $array);
+				array_multisort($data, $array);
 			}
 
 			return ($reverse === true) ? array_reverse($array, true) : $array;
@@ -543,6 +565,65 @@ class phunction
 		return false;
 	}
 
+	public static function URL($url = null, $path = null, $query = null)
+	{
+		if (isset($url) === true)
+		{
+			if ((is_array($url = @parse_url($url)) === true) && (isset($url['scheme'], $url['host']) === true))
+			{
+				$result = strtolower($url['scheme']) . '://';
+
+				if ((isset($url['user']) === true) || (isset($url['pass']) === true))
+				{
+					$result .= ltrim(rtrim(self::Value($url, 'user') . ':' . self::Value($url, 'pass'), ':') . '@', '@');
+				}
+
+				$result .= strtolower($url['host']) . '/';
+
+				if ((isset($url['port']) === true) && (strcmp($url['port'], getservbyname($url['scheme'], 'tcp')) !== 0))
+				{
+					$result = rtrim($result, '/') . ':' . intval($url['port']) . '/';
+				}
+
+				if (($path !== false) && ((isset($path) === true) || (isset($url['path']) === true)))
+				{
+					if (is_scalar($path) === true)
+					{
+						$url['path'] = '/' . ltrim($path, '/');
+					}
+
+					while (preg_match('~/[.][.]?(?:/|$)~', $url['path']) > 0)
+					{
+						$url['path'] = preg_replace(array('~/+~', '~/[.](?:/|$)~', '~(?:^|/[^/]+)/[.]{2}(?:/|$)~'), '/', $url['path']);
+					}
+
+					$result .= preg_replace('~/+~', '/', ltrim($url['path'], '/'));
+				}
+
+				if (($query !== false) && ((isset($query) === true) || (isset($url['query']) === true)))
+				{
+					parse_str(self::Value($url, 'query'), $url['query']);
+
+					if (is_array($query) === true)
+					{
+						$url['query'] = array_merge($url['query'], $query);
+					}
+
+					if ((count($url['query'] = array_filter($url['query'], 'count')) > 0) && (ksort($url['query']) === true))
+					{
+						$result .= rtrim('?' . http_build_query($url['query'], '', '&'), '?');
+					}
+				}
+
+				return preg_replace('~(%[0-9a-f]{2})~e', "strtoupper('$1')", $result);
+			}
+
+			return false;
+		}
+
+		return self::URL(getservbyport($_SERVER['SERVER_PORT'], 'tcp') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . '/', $path, $query);
+	}
+
 	public static function Value($data, $key = null, $default = false)
 	{
 		if (isset($key) === true)
@@ -566,23 +647,30 @@ class phunction
 		return $data;
 	}
 
-	public static function View($view, $data = null, $return = false)
+	public static function View($path, $data = null, $minify = true, $return = false)
 	{
-		if (is_file($view . '.php') === true)
+		if (is_file($path . '.php') === true)
 		{
 			extract((array) $data);
 
-			if ($return === true)
+			if ((($minify === true) || ($return === true)) && (ob_start() === true))
 			{
-				if (ob_start() === true)
+				require($path . '.php');
+
+				if ((($result = ob_get_clean()) !== false) && (ob_start() === true))
 				{
-					require($view . '.php');
+					if ($minify === true)
+					{
+						$result = preg_replace('~^[\t]+~m', '', $result);
+					}
+
+					echo $result;
 				}
 
-				return ob_get_clean();
+				return ($return === true) ? ob_get_clean() : ob_end_flush();
 			}
 
-			require($view . '.php');
+			require($path . '.php');
 		}
 	}
 }
@@ -879,7 +967,7 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Download($path, $speed = null, $multithread = false)
+	public static function Download($path, $speed = null, $multipart = false)
 	{
 		if (is_file($path) === true)
 		{
@@ -897,7 +985,7 @@ class phunction_Disk extends phunction
 				set_time_limit(0);
 				session_write_close();
 
-				if ($multithread === true)
+				if ($multipart === true)
 				{
 					$range = array(0, $size - 1);
 
@@ -912,7 +1000,7 @@ class phunction_Disk extends phunction
 
 						foreach ($range as $key => $value)
 						{
-							$range[$key] = ph()->Math->Between($value, 0, $size - 1);
+							$range[$key] = max(0, min($value, $size - 1));
 						}
 
 						if (($range[0] > 0) || ($range[1] < ($size - 1)))
@@ -974,12 +1062,12 @@ class phunction_Disk extends phunction
 
 		else if (is_file($path) === true)
 		{
-			if ((empty($ttl) === true) || (parent::Date('U', 'now', '-' . filemtime($path) . ' seconds') <= intval($ttl)))
+			if ((empty($ttl) === true) || ((time() - filemtime($path)) <= intval($ttl)))
 			{
 				return file_get_contents($path);
 			}
 
-			return unlink($path);
+			return @unlink($path);
 		}
 
 		return false;
@@ -1243,7 +1331,12 @@ class phunction_Disk extends phunction
 
 				if ($_FILES[$input]['error'][$key] == UPLOAD_ERR_OK)
 				{
-					if (preg_match('~' . $mime . '~', self::Mime($_FILES[$input]['tmp_name'][$key], $magic)) > 0)
+					if (isset($mime) === true)
+					{
+						$_FILES[$input]['type'][$key] = self::Mime($_FILES[$input]['tmp_name'][$key], $magic);
+					}
+
+					if (preg_match('~' . $mime . '~', $_FILES[$input]['type'][$key]) > 0)
 					{
 						$file = ph()->Text->Slug($value, '_', '.');
 
@@ -1465,24 +1558,24 @@ class phunction_Is extends phunction
 
 	public static function ASCII($value)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[\x20-\x7E]*$~')));
+		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[\x20-\x7E]*$~'))) !== false) ? true : false;
 	}
 
 	public static function Alpha($value)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[a-z]*$~i')));
+		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[a-z]*$~i'))) !== false) ? true : false;
 	}
 
 	public static function Alphanum($value)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[0-9a-z]*$~i')));
+		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[0-9a-z]*$~i'))) !== false) ? true : false;
 	}
 
 	public static function Email($value, $mx = true)
 	{
 		if (filter_var($value, FILTER_VALIDATE_EMAIL) !== false)
 		{
-			return (($mx === true) && (function_exists('checkdnsrr') === true)) ? checkdnsrr(ltrim(strstr($value, '@'), '@'), 'MX') : true;
+			return (($mx === true) && (function_exists('checkdnsrr') === true)) ? checkdnsrr(ltrim(strrchr($value, '@'), '@'), 'MX') : true;
 		}
 
 		return false;
@@ -1490,37 +1583,42 @@ class phunction_Is extends phunction
 
 	public static function Float($value)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_FLOAT);
+		return (filter_var($value, FILTER_VALIDATE_FLOAT) !== false) ? true : false;
 	}
 
 	public static function Hash($value)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^(?:[[:xdigit:]]{8})+$~')));
+		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^(?:[[:xdigit:]]{8})+$~'))) !== false) ? true : false;
 	}
 
 	public static function Integer($value, $minimum = null, $maximum = null)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_INT, array('options' => array_filter(array('min_range' => $minimum, 'max_range' => $maximum), 'strlen')));
+		return (filter_var($value, FILTER_VALIDATE_INT, array('options' => array_filter(array('min_range' => $minimum, 'max_range' => $maximum), 'strlen'))) !== false) ? true : false;
 	}
 
 	public static function IP($value)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
+		return (filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false) ? true : false;
 	}
 
 	public static function Number($value)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[+-]?\d+(?:[.]\d+)?$~')));
+		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[+-]?\d+(?:[.]\d+)?$~'))) !== false) ? true : false;
 	}
 
 	public static function Set($value)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~[[:graph:]]~')));
+		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~[[:graph:]]~'))) !== false) ? true : false;
 	}
 
 	public static function URL($value)
 	{
-		return (bool) filter_var($value, FILTER_VALIDATE_URL);
+		return (filter_var($value, FILTER_VALIDATE_URL) !== false) ? true : false;
+	}
+
+	public static function Void($value)
+	{
+		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[^[:graph:]]*$~'))) !== false) ? true : false;
 	}
 }
 
@@ -1547,8 +1645,8 @@ class phunction_Math extends phunction
 	{
 		if (strlen($charset) >= 2)
 		{
-			$input = self::Between($input, 2, strlen($charset));
-			$output = self::Between($output, 2, strlen($charset));
+			$input = max(2, min(intval($input), strlen($charset)));
+			$output = max(2, min(intval($output), strlen($charset)));
 			$number = ltrim(preg_replace('~[^' . preg_quote(substr($charset, 0, $input), '~') . ']+~', '', $number), $charset[0]);
 
 			if (strlen($number) > 0)
@@ -1791,6 +1889,23 @@ class phunction_Math extends phunction
 		return false;
 	}
 
+	public static function Matrix($size, $length = 2)
+	{
+		if (count($size = array_filter(explode('*', $size), 'is_numeric')) == 2)
+		{
+			$size[0] = min(26, $size[0]);
+
+			foreach (($result = range(1, array_product($size))) as $key => $value)
+			{
+				$result[$key] = str_pad(mt_rand(0, pow(10, $length) - 1), $length, '0', STR_PAD_LEFT);
+			}
+
+			return array_combine(array_slice(range('A', 'Z'), 0, $size[0]), array_chunk($result, $size[1]));
+		}
+
+		return false;
+	}
+
 	public static function Pagination($data, $limit = null, $current = null, $adjacents = null)
 	{
 		$result = array();
@@ -1957,7 +2072,7 @@ class phunction_Net extends phunction
 
 		if ($result === false)
 		{
-			$countries = self::CURL('http://www.geonames.org/countryInfoJSON?&lang=' . urlencode($language));
+			$countries = self::CURL('http://www.geonames.org/countryInfoJSON?lang=' . urlencode($language));
 
 			if ($countries !== false)
 			{
@@ -1972,7 +2087,7 @@ class phunction_Net extends phunction
 						$result[$value['countryCode']] = $value['countryName'];
 					}
 
-					$result = parent::Cache(vsprintf('%s:%s', $key), parent::Sort($result), $ttl);
+					$result = parent::Cache(vsprintf('%s:%s', $key), parent::Sort($result, false), $ttl);
 				}
 			}
 		}
@@ -2164,7 +2279,7 @@ class phunction_Net extends phunction
 				if (array_sum(array(count($to), count($cc), count($bcc))) == 1)
 				{
 					$count = 0;
-					$hashcash = sprintf('1:20:%u:%s::%s:', parent::Date('ymd'), parent::Coalesce($to, $cc, $bcc), mt_rand());
+					$hashcash = sprintf('1:20:%u:%s::%u:', parent::Date('ymd'), parent::Coalesce($to, $cc, $bcc), mt_rand());
 
 					while (strncmp('00000', sha1($hashcash . $count), 5) !== 0)
 					{
@@ -2334,7 +2449,7 @@ class phunction_Net extends phunction
 			'sensor' => 'false',
 		);
 
-		$result = self::CURL('http://maps.googleapis.com/maps/api/geocode/json?' . http_build_query($data, '', '&'));
+		$result = self::CURL(parent::URL('http://maps.googleapis.com/', '/maps/api/geocode/json', $data));
 
 		if ($result !== false)
 		{
@@ -2484,7 +2599,7 @@ class phunction_Net extends phunction
 			'langpair' => sprintf('%s|%s', $input, $output),
 		);
 
-		$result = self::CURL('http://ajax.googleapis.com/ajax/services/language/translate?' . http_build_query($data, '', '&'));
+		$result = self::CURL(parent::URL('http://ajax.googleapis.com/', '/ajax/services/language/translate', $data));
 
 		if ($result !== false)
 		{
@@ -2523,6 +2638,37 @@ class phunction_Net extends phunction
 			}
 
 			return $result;
+		}
+
+		return false;
+	}
+
+	public static function Whois($domain)
+	{
+		if (strpos($domain, '.') !== false)
+		{
+			$tld = strtolower(ltrim(strrchr($domain, '.'), '.'));
+			$socket = @fsockopen($tld . '.whois-servers.net', 43);
+
+			if (is_resource($socket) === true)
+			{
+				if (preg_match('~com|net~', $tld) > 0)
+				{
+					$domain = sprintf('domain %s', $domain);
+				}
+
+				if (fwrite($socket, $domain . "\r\n") !== false)
+				{
+					$result = null;
+
+					while (feof($socket) !== true)
+					{
+						$result .= fread($socket, 8192);
+					}
+
+					return $result;
+				}
+			}
 		}
 
 		return false;
@@ -2849,14 +2995,16 @@ class phunction_Text extends phunction
 		return $string;
 	}
 
-	public static function Title($string, $raw = false)
+	public static function Title($string, $encode = true)
 	{
-		if (ob_get_level() > 0)
+		if ((($result = ob_get_clean()) !== false) && (ob_start() === true))
 		{
-			if (preg_match('~<title>[^<]*</title>~i', ob_get_contents()) > 0)
+			if ($encode === true)
 			{
-				echo preg_replace('~<title>[^<]*</title>~i', '<title>' . (($raw === true) ? $string : addcslashes($string, '\\$')) . '</title>', ob_get_clean(), 1);
+				$string = addcslashes($string, '\\$');
 			}
+
+			echo preg_replace('~<title>([^<]*)</title>~i', '<title>' . $string . '</title>', $result, 1);
 		}
 
 		return false;
