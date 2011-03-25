@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.3.17 (github.com/alixaxel/phunction/)
+* phunction 1.3.25 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -265,7 +265,7 @@ class phunction
 				}
 			}
 
-			else if (is_null($index) === true)
+			else if (is_null($key) === true)
 			{
 				foreach (new RecursiveIteratorIterator(new RecursiveArrayIterator($data)) as $value)
 				{
@@ -456,7 +456,7 @@ class phunction
 						$value = preg_replace('~([0-9]+)~e', "sprintf('%032d', '$1')", $value);
 					}
 
-					$data[$key] = strtolower($value);
+					$data[$key] = strtolower(html_entity_decode($value, ENT_QUOTES, 'UTF-8'));
 				}
 
 				array_multisort($data, $array);
@@ -474,10 +474,8 @@ class phunction
 		$arguments = array_filter(array_slice(func_get_args(), 2), 'is_array');
 		$attributes = (empty($arguments) === true) ? array() : call_user_func_array('array_merge', $arguments);
 
-		if (count($attributes) > 0)
+		if ((count($attributes) > 0) && (ksort($attributes) === true))
 		{
-			ksort($attributes);
-
 			foreach ($attributes as $key => $value)
 			{
 				$attributes[$key] = sprintf(' %s="%s"', htmlspecialchars($key), ($value === true) ? htmlspecialchars($key) : htmlspecialchars($value));
@@ -621,7 +619,7 @@ class phunction
 			return false;
 		}
 
-		return self::URL(getservbyport($_SERVER['SERVER_PORT'], 'tcp') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . '/', $path, $query);
+		return self::URL(getservbyport($_SERVER['SERVER_PORT'], 'tcp') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'], $path, $query);
 	}
 
 	public static function Value($data, $key = null, $default = false)
@@ -630,10 +628,7 @@ class phunction
 		{
 			foreach ((array) $key as $value)
 			{
-				if (is_object($data) === true)
-				{
-					$data = get_object_vars($data);
-				}
+				$data = (is_object($data) === true) ? get_object_vars($data) : $data;
 
 				if ((is_array($data) !== true) || (array_key_exists($value, $data) !== true))
 				{
@@ -661,7 +656,7 @@ class phunction
 				{
 					if ($minify === true)
 					{
-						$result = preg_replace('~^[\t]+~m', '', $result);
+						$result = preg_replace('~^\t+~m', '', $result);
 					}
 
 					echo $result;
@@ -1073,7 +1068,7 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Image($input, $crop = null, $scale = null, $merge = null, $sharpen = true, $output = null)
+	public static function Image($input, $crop = null, $scale = null, $merge = null, $output = null, $sharpen = true)
 	{
 		$input = @ImageCreateFromString(@file_get_contents($input));
 
@@ -1202,7 +1197,7 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Map($path)
+	public static function Map($path, $pattern = '*')
 	{
 		$path = self::Path($path);
 
@@ -1210,14 +1205,14 @@ class phunction_Disk extends phunction
 		{
 			if (is_dir($path) === true)
 			{
-				$result = glob(rtrim($path, '/') . '/*', GLOB_MARK);
+				$result = glob($path . $pattern, GLOB_MARK | GLOB_BRACE | GLOB_NOSORT);
 
 				foreach ($result as $key => $value)
 				{
 					$result[$key] = str_replace('\\', '/', $value);
 				}
 
-				return $result;
+				return parent::Sort($result, true, false);
 			}
 
 			return array($path);
@@ -1274,7 +1269,7 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Size($path, $recursive = true)
+	public static function Size($path, $unit = null, $recursive = true)
 	{
 		$result = 0;
 
@@ -1287,7 +1282,7 @@ class phunction_Disk extends phunction
 			{
 				if (is_dir($path . $file) === true)
 				{
-					$result += ($recursive === true) ? self::Size($path . $file, $recursive) : 0;
+					$result += ($recursive === true) ? self::Size($path . $file, null, $recursive) : 0;
 				}
 
 				else if (is_file($path . $file) === true)
@@ -1300,6 +1295,18 @@ class phunction_Disk extends phunction
 		else if (is_file($path) === true)
 		{
 			$result += sprintf('%u', filesize($path));
+		}
+
+		if ((isset($unit) === true) && ($result > 0))
+		{
+			$units = array('B', 'KB', 'MB', 'GB', 'TB');
+
+			if (($unit = array_search($unit, $units, true)) === false)
+			{
+				$unit = floor(log($result, 1024));
+			}
+
+			$result = array($result / pow(1024, $unit), $units[$unit]);
 		}
 
 		return $result;
@@ -2001,8 +2008,9 @@ class phunction_Math extends phunction
 	public static function Relative()
 	{
 		$result = 0;
+		$arguments = self::Flatten(func_get_args());
 
-		foreach (parent::Flatten(func_get_args()) as $argument)
+		foreach ($arguments as $argument)
 		{
 			if (substr($argument, -1) == '%')
 			{
@@ -2484,9 +2492,107 @@ class phunction_Net extends phunction
 		return (geoip_db_avail(GEOIP_COUNTRY_EDITION) === true) ? geoip_country_code_by_name($ip) : false;
 	}
 
-	public static function Online()
+	public static function OpenID($id, $realm = null, $return = null, $verify = true)
 	{
-		return ph()->Is->IP(gethostbyname('google.com'));
+		$data = array();
+
+		if (($verify === true) && (array_key_exists('openid_mode', $_REQUEST) === true))
+		{
+			$result = parent::Value($_REQUEST, 'openid_claimed_id', parent::Value($_REQUEST, 'openid_identity'));
+
+			if ((strcmp('id_res', parent::Value($_REQUEST, 'openid_mode')) === 0) && (ph()->Is->URL($result) === true))
+			{
+				$data['openid.mode'] = 'check_authentication';
+
+				foreach (array('ns', 'sig', 'signed', 'assoc_handle') as $key)
+				{
+					$data['openid.' . $key] = parent::Value($_REQUEST, 'openid_' . $key);
+
+					if (strcmp($key, 'signed') === 0)
+					{
+						foreach (explode(',', parent::Value($_REQUEST, 'openid_signed')) as $value)
+						{
+							$data['openid.' . $value] = parent::Value($_REQUEST, 'openid_' . str_replace('.', '_', $value));
+						}
+					}
+				}
+
+				return (preg_match('~is_valid\s*:\s*true~', self::CURL(self::OpenID($result, false, false, false), array_filter($data, 'is_string'), 'POST')) > 0) ? $result : false;
+			}
+		}
+
+		else if (($result = self::XML(self::CURL($id))) !== false)
+		{
+			$server = null;
+			$protocol = array
+			(
+				array('specs.openid.net/auth/2.0/server', 'specs.openid.net/auth/2.0/signon', array('openid2.provider', 'openid2.local_id')),
+				array('openid.net/signon/1.1', 'openid.net/signon/1.0', array('openid.server', 'openid.delegate')),
+			);
+
+			foreach ($protocol as $key => $value)
+			{
+				foreach ($value as $namespace)
+				{
+					if (is_string($namespace) === true)
+					{
+						if (is_object($xml = self::XML($result, sprintf('//xrd/service[contains(type, "http://%s")]', $namespace), 0)) === true)
+						{
+							$server = parent::Value($xml, 'uri');
+
+							if ($key === 0)
+							{
+								$delegate = parent::Value($xml, 'localid', parent::Value($xml, 'canonicalid', $id));
+
+								if (strcmp($namespace, 'specs.openid.net/auth/2.0/server') === 0)
+								{
+									$delegate = 'http://specs.openid.net/auth/2.0/identifier_select';
+								}
+							}
+
+							else if ($key === 1)
+							{
+								$delegate = parent::Value($xml, 'delegate', $id);
+							}
+						}
+					}
+
+					else if (is_array($namespace) === true)
+					{
+						$server = strval(self::XML($result, sprintf('//head/link[contains(@rel, "%s")]/@href', $namespace[0]), 0));
+						$delegate = strval(self::XML($result, sprintf('//head/link[contains(@rel, "%s")]/@href', $namespace[1]), 0, $id));
+					}
+
+					if (ph()->Is->URL($server) === true)
+					{
+						if (($realm !== false) && ($return !== false))
+						{
+							$data['openid.mode'] = 'checkid_setup';
+							$data['openid.identity'] = $delegate;
+							$data['openid.return_to'] = parent::URL($return, null, null);
+
+							if ($key === 0)
+							{
+								$data['openid.ns'] = 'http://specs.openid.net/auth/2.0';
+								$data['openid.realm'] = parent::URL($realm, false, false);
+								$data['openid.claimed_id'] = $delegate;
+							}
+
+							else if ($key === 1)
+							{
+								$data['openid.trust_root'] = parent::URL($realm, false, false);
+							}
+
+							parent::Redirect(parent::URL($server, null, $data));
+						}
+
+						return $server;
+					}
+				}
+			}
+		}
+
+		return false;
 	}
 
 	public static function PayPal($email, $status = 'Completed', $sandbox = false)
@@ -2676,33 +2782,36 @@ class phunction_Net extends phunction
 
 	public static function XML($xml, $xpath = null, $key = null, $default = false)
 	{
-		if (extension_loaded('SimpleXML') === true)
+		if (extension_loaded('libxml') === true)
 		{
 			libxml_use_internal_errors(true);
 
-			if ((is_string($xml) === true) && (class_exists('DOMDocument') === true))
+			if ((extension_loaded('dom') === true) && (extension_loaded('SimpleXML') === true))
 			{
-				$dom = new DOMDocument();
-
-				if ($dom->loadHTML($xml) === true)
+				if (is_string($xml) === true)
 				{
-					return self::XML(simplexml_import_dom($dom), $xpath, $key, $default);
-				}
-			}
+					$dom = new DOMDocument();
 
-			else if (is_object($xml) === true)
-			{
-				if (isset($xpath) === true)
-				{
-					$xml = $xml->xpath($xpath);
-
-					if (isset($key) === true)
+					if (@$dom->loadHTML($xml) === true)
 					{
-						$xml = parent::Value($xml, $key, $default);
+						return self::XML(@simplexml_import_dom($dom), $xpath, $key, $default);
 					}
 				}
 
-				return $xml;
+				else if ((is_object($xml) === true) && (strcmp('SimpleXMLElement', get_class($xml)) === 0))
+				{
+					if (isset($xpath) === true)
+					{
+						$xml = $xml->xpath($xpath);
+
+						if (isset($key) === true)
+						{
+							$xml = parent::Value($xml, $key, $default);
+						}
+					}
+
+					return $xml;
+				}
 			}
 		}
 
@@ -2870,7 +2979,7 @@ class phunction_Text extends phunction
 		return trim(com_create_guid(), '{}');
 	}
 
-	public static function Hash($string, $hash = null, $salt = null, $iterations = 1024, $algorithm = 'sha256')
+	public static function Hash($string, $hash = null, $salt = null, $cost = 1024, $algorithm = 'sha256')
 	{
 		if (extension_loaded('hash') === true)
 		{
@@ -2878,20 +2987,20 @@ class phunction_Text extends phunction
 			{
 				if (empty($salt) === true)
 				{
-					$salt = uniqid(mt_rand(), true);
+					$salt = uniqid(null, true);
 				}
 
 				if (in_array($algorithm, hash_algos()) === true)
 				{
+					$cost = max(1024, intval($cost));
 					$result = hash($algorithm, $salt . $string);
-					$iterations = max(1024, intval($iterations));
 
-					for ($i = 1; $i < $iterations; ++$i)
+					for ($i = 1; $i < $cost; ++$i)
 					{
 						$result = hash($algorithm, $result . $string);
 					}
 
-					return sprintf('%s|%u|%s|%s', $algorithm, $iterations, $salt, $result);
+					return sprintf('%s|%u|%s|%s', $algorithm, $cost, $salt, $result);
 				}
 			}
 
@@ -2909,13 +3018,11 @@ class phunction_Text extends phunction
 		return ph()->Unicode->ucwords(trim(str_replace('_', ' ', ph()->Unicode->strtolower($string))));
 	}
 
-	public static function Indent($string, $indentation = 1)
+	public static function Indent($string, $indent = 1)
 	{
-		$indentation = str_repeat("\t", intval($indentation));
-
-		if (strlen($indentation) > 0)
+		if (strlen($indent = str_repeat("\t", intval($indent))) > 0)
 		{
-			$string = rtrim($indentation . implode("\n" . $indentation, explode("\n", $string)), "\t");
+			$string = rtrim($indent . implode("\n" . $indent, explode("\n", $string)), "\t");
 		}
 
 		return $string;
@@ -2985,9 +3092,7 @@ class phunction_Text extends phunction
 
 	public static function Surround($string, $surround = null)
 	{
-		$string = trim($string);
-
-		if (strlen($string) > 0)
+		if (strlen($string = trim($string)) > 0)
 		{
 			$string = sprintf('%s%s%s', $surround, $string, $surround);
 		}
@@ -3012,9 +3117,7 @@ class phunction_Text extends phunction
 
 	public static function Truncate($string, $limit, $more = '...')
 	{
-		$string = trim($string);
-
-		if (ph()->Unicode->strlen($string) > $limit)
+		if (ph()->Unicode->strlen($string = trim($string)) > $limit)
 		{
 			return preg_replace('~^(.{1,' . $limit . '}(?<=\S)(?=\s)|.{' . $limit . '}).*$~su', '$1', $string) . $more;
 		}
@@ -3024,7 +3127,12 @@ class phunction_Text extends phunction
 
 	public static function Unaccent($string)
 	{
-		return html_entity_decode(preg_replace('~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1', htmlentities($string, ENT_QUOTES, 'UTF-8')), ENT_QUOTES, 'UTF-8');
+		if (strpos($string = htmlentities($string, ENT_QUOTES, 'UTF-8'), '&') !== false)
+		{
+			$string = html_entity_decode(preg_replace('~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1', $string), ENT_QUOTES, 'UTF-8');
+		}
+
+		return $string;
 	}
 
 	public static function XSS($string)
@@ -3056,9 +3164,7 @@ class phunction_Unicode extends phunction
 
 	public static function lcwords($string)
 	{
-		$result = array_unique(self::str_word_count($string, 1));
-
-		if (count($result) > 0)
+		if (count($result = array_unique(self::str_word_count($string, 1))) > 0)
 		{
 			$string = str_replace($result, array_map('self::lcfirst', $result), $string);
 		}
@@ -3085,9 +3191,7 @@ class phunction_Unicode extends phunction
 
 	public static function str_shuffle($string)
 	{
-		$string = self::str_split($string);
-
-		if (count($string) > 0)
+		if (count($string = self::str_split($string)) > 1)
 		{
 			shuffle($string);
 		}
@@ -3134,9 +3238,7 @@ class phunction_Unicode extends phunction
 
 	public static function stristr($string, $search, $before = false)
 	{
-		$result = self::stripos($string, $search);
-
-		if ($result !== false)
+		if (($result = self::stripos($string, $search)) !== false)
 		{
 			$result = ($before !== true) ? self::substr($string, $result) : self::substr($string, 0, $result);
 		}
@@ -3169,9 +3271,7 @@ class phunction_Unicode extends phunction
 
 	public static function strstr($string, $search, $before = false)
 	{
-		$result = self::strpos($string, $search);
-
-		if ($result !== false)
+		if (($result = self::strpos($string, $search)) !== false)
 		{
 			$result = ($before !== true) ? self::substr($string, $result) : self::substr($string, 0, $result);
 		}
@@ -3226,9 +3326,7 @@ class phunction_Unicode extends phunction
 
 	public static function ucwords($string)
 	{
-		$result = array_unique(self::str_word_count($string, 1));
-
-		if (count($result) > 0)
+		if (count($result = array_unique(self::str_word_count($string, 1))) > 0)
 		{
 			$string = str_replace($result, array_map('self::ucfirst', $result), $string);
 		}
