@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.3.25 (github.com/alixaxel/phunction/)
+* phunction 1.3.26 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -49,6 +49,8 @@ class phunction
 			$_COOKIE = json_decode(stripslashes(json_encode($_COOKIE, JSON_HEX_APOS | JSON_HEX_QUOT)), true);
 			$_REQUEST = json_decode(stripslashes(json_encode($_REQUEST, JSON_HEX_APOS | JSON_HEX_QUOT)), true);
 		}
+
+		$GLOBALS['_PUT'] = (strcasecmp('PUT', $_SERVER['REQUEST_METHOD']) === 0) ? file_get_contents('php://input') : null;
 	}
 
 	public function __get($key)
@@ -339,29 +341,22 @@ class phunction
 
 		if (class_exists($object, false) === true)
 		{
-			if (array_key_exists($object, $result) !== true)
+			if (isset($result[self::$id][$object]) !== true)
 			{
-				$result[$object] = new $object();
+				$result[self::$id][$object] = new $object();
 			}
 
-			return $result[$object];
+			return $result[self::$id][$object];
 		}
 
 		else if (is_file($object . '.php') === true)
 		{
-			$class = basename($object);
-
-			if (array_key_exists($class, $result) !== true)
+			if (class_exists(basename($object), false) !== true)
 			{
-				if (class_exists($class, false) !== true)
-				{
-					require($object . '.php');
-				}
-
-				$result[$class] = new $class();
+				require($object . '.php');
 			}
 
-			return $result[$class];
+			return self::Object(basename($object));
 		}
 
 		return false;
@@ -449,14 +444,17 @@ class phunction
 
 				foreach ($array as $key => $value)
 				{
-					$value = preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1' . chr(255) . '$2', htmlentities($value, ENT_QUOTES, 'UTF-8'));
-
 					if ($natural === true)
 					{
 						$value = preg_replace('~([0-9]+)~e', "sprintf('%032d', '$1')", $value);
 					}
 
-					$data[$key] = strtolower(html_entity_decode($value, ENT_QUOTES, 'UTF-8'));
+					if (strpos($value = htmlentities($string, ENT_QUOTES, 'UTF-8'), '&') !== false)
+					{
+						$value = html_entity_decode(preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1' . chr(255) . '$2', $value), ENT_QUOTES, 'UTF-8');
+					}
+
+					$data[$key] = strtolower($value);
 				}
 
 				array_multisort($data, $array);
@@ -1068,124 +1066,107 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Image($input, $crop = null, $scale = null, $merge = null, $output = null, $sharpen = true)
+	public static function Image($input, $crop = null, $scale = null, $merge = null, $sharp = true, $output = null)
 	{
-		$input = @ImageCreateFromString(@file_get_contents($input));
-
-		if (is_resource($input) === true)
+		if (isset($input, $output) === true)
 		{
-			$size = array(ImageSX($input), ImageSY($input));
-			$crop = array_values(array_filter(explode('/', $crop), 'is_numeric'));
-			$scale = array_values(array_filter(explode('*', $scale), 'is_numeric'));
+			$input = @ImageCreateFromString(@file_get_contents($input));
 
-			if (count($crop) == 2)
+			if (is_resource($input) === true)
 			{
-				$crop = array($size[0] / $size[1], $crop[0] / $crop[1]);
+				$size = array(ImageSX($input), ImageSY($input));
+				$crop = array_values(array_filter(explode('/', $crop), 'is_numeric'));
+				$scale = array_values(array_filter(explode('*', $scale), 'is_numeric'));
 
-				if ($crop[0] > $crop[1])
+				if (count($crop) == 2)
 				{
-					$size[0] = round($size[1] * $crop[1]);
-				}
+					$crop = array($size[0] / $size[1], $crop[0] / $crop[1]);
 
-				else if ($crop[0] < $crop[1])
-				{
-					$size[1] = round($size[0] / $crop[1]);
-				}
-
-				$crop = array(ImageSX($input) - $size[0], ImageSY($input) - $size[1]);
-			}
-
-			else
-			{
-				$crop = array(0, 0);
-			}
-
-			if (count($scale) >= 1)
-			{
-				if (empty($scale[0]) === true)
-				{
-					$scale[0] = round($scale[1] * $size[0] / $size[1]);
-				}
-
-				else if (empty($scale[1]) === true)
-				{
-					$scale[1] = round($scale[0] * $size[1] / $size[0]);
-				}
-			}
-
-			else
-			{
-				$scale = array($size[0], $size[1]);
-			}
-
-			$image = ImageCreateTrueColor($scale[0], $scale[1]);
-
-			if (is_resource($image) === true)
-			{
-				ImageFill($image, 0, 0, IMG_COLOR_TRANSPARENT);
-				ImageSaveAlpha($image, true);
-				ImageAlphaBlending($image, true);
-
-				if (ImageCopyResampled($image, $input, 0, 0, round($crop[0] / 2), round($crop[1] / 2), $scale[0], $scale[1], $size[0], $size[1]) === true)
-				{
-					if ($sharpen === true)
+					if ($crop[0] > $crop[1])
 					{
-						$matrix = array(-1, -1, -1, -1, 16, -1, -1, -1, -1);
-
-						if (function_exists('ImageConvolution') === true)
-						{
-							ImageConvolution($image, array_chunk($matrix, 3), array_sum($matrix), 0);
-						}
+						$size[0] = round($size[1] * $crop[1]);
 					}
 
-					if (isset($merge) === true)
+					else if ($crop[0] < $crop[1])
 					{
-						$merge = @ImageCreateFromString(@file_get_contents($merge));
-
-						if (is_resource($merge) === true)
-						{
-							ImageCopy($image, $merge, round(0.95 * $scale[0] - ImageSX($merge)), round(0.95 * $scale[1] - ImageSY($merge)), 0, 0, ImageSX($merge), ImageSY($merge));
-						}
+						$size[1] = round($size[0] / $crop[1]);
 					}
 
-					if (isset($output) === true)
+					$crop = array(ImageSX($input) - $size[0], ImageSY($input) - $size[1]);
+				}
+
+				else
+				{
+					$crop = array(0, 0);
+				}
+
+				if (count($scale) >= 1)
+				{
+					if (empty($scale[0]) === true)
+					{
+						$scale[0] = round($scale[1] * $size[0] / $size[1]);
+					}
+
+					else if (empty($scale[1]) === true)
+					{
+						$scale[1] = round($scale[0] * $size[1] / $size[0]);
+					}
+				}
+
+				else
+				{
+					$scale = array($size[0], $size[1]);
+				}
+
+				$image = ImageCreateTrueColor($scale[0], $scale[1]);
+
+				if (is_resource($image) === true)
+				{
+					ImageFill($image, 0, 0, IMG_COLOR_TRANSPARENT);
+					ImageSaveAlpha($image, true);
+					ImageAlphaBlending($image, true);
+
+					if (ImageCopyResampled($image, $input, 0, 0, round($crop[0] / 2), round($crop[1] / 2), $scale[0], $scale[1], $size[0], $size[1]) === true)
 					{
 						$result = false;
 
-						if (preg_match('~gif$~i', $output) > 0)
+						if (empty($sharp) !== true)
 						{
-							$output = preg_replace('~^[.]?gif$~i', '', $output);
-
-							if (empty($output) === true)
+							if (is_array($matrix = array_fill(0, 9, -1)) === true)
 							{
-								header('Content-Type: image/gif');
+								array_splice($matrix, 4, 1, (is_int($sharp) === true) ? $sharp : 16);
 							}
 
-							$result = ImageGIF($image, $output);
+							if (function_exists('ImageConvolution') === true)
+							{
+								ImageConvolution($image, array_chunk($matrix, 3), array_sum($matrix), 0);
+							}
 						}
 
-						else if (preg_match('~png$~i', $output) > 0)
+						if (isset($merge) === true)
 						{
-							$output = preg_replace('~^[.]?png$~i', '', $output);
+							$merge = @ImageCreateFromString(@file_get_contents($merge));
 
-							if (empty($output) === true)
+							if (is_resource($merge) === true)
 							{
-								header('Content-Type: image/png');
+								ImageCopy($image, $merge, round(0.95 * $scale[0] - ImageSX($merge)), round(0.95 * $scale[1] - ImageSY($merge)), 0, 0, ImageSX($merge), ImageSY($merge));
 							}
-
-							$result = ImagePNG($image, $output, 9);
 						}
 
-						else if (preg_match('~jpe?g$~i', $output) > 0)
+						foreach (array('gif' => 0, 'png' => 9, 'jpe?g' => 90) as $key => $value)
 						{
-							$output = preg_replace('~^[.]?jpe?g$~i', '', $output);
-
-							if (empty($output) === true)
+							if (preg_match('~' . $key . '$~i', $output) > 0)
 							{
-								header('Content-Type: image/jpeg');
-							}
+								$type = str_replace('?', '', $key);
+								$output = preg_replace('~^[.]?' . $key . '$~i', '', $output);
 
-							$result = ImageJPEG($image, $output, 90);
+								if (empty($output) === true)
+								{
+									header('Content-Type: image/' . $type);
+								}
+
+								$result = call_user_func_array('Image' . $type, array($image, $output, $value));
+							}
 						}
 
 						return (empty($output) === true) ? $result : self::Chmod($output);
@@ -1194,14 +1175,17 @@ class phunction_Disk extends phunction
 			}
 		}
 
+		else if ((isset($input) === true) && (count($result = @GetImageSize($input)) >= 2))
+		{
+			return array_map('intval', array_slice($result, 0, 2));
+		}
+
 		return false;
 	}
 
 	public static function Map($path, $pattern = '*')
 	{
-		$path = self::Path($path);
-
-		if ($path !== false)
+		if (($path = self::Path($path)) !== false)
 		{
 			if (is_dir($path) === true)
 			{
@@ -1299,14 +1283,12 @@ class phunction_Disk extends phunction
 
 		if ((isset($unit) === true) && ($result > 0))
 		{
-			$units = array('B', 'KB', 'MB', 'GB', 'TB');
-
-			if (($unit = array_search($unit, $units, true)) === false)
+			if (($unit = array_search($unit, array('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'), true)) === false)
 			{
-				$unit = floor(log($result, 1024));
+				$unit = intval(log($result, 1024));
 			}
 
-			$result = array($result / pow(1024, $unit), $units[$unit]);
+			$result = array($result / pow(1024, $unit), parent::Value(array('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'), $unit));
 		}
 
 		return $result;
@@ -1352,12 +1334,9 @@ class phunction_Disk extends phunction
 							$file = substr_replace($file, '_' . md5_file($_FILES[$input]['tmp_name'][$key]), strrpos($value, '.'), 0);
 						}
 
-						if (move_uploaded_file($_FILES[$input]['tmp_name'][$key], $output . $file) === true)
+						if ((move_uploaded_file($_FILES[$input]['tmp_name'][$key], $output . $file) === true) && (self::Chmod($output . $file, $chmod) === true))
 						{
-							if (self::Chmod($output . $file, $chmod) === true)
-							{
-								$result[$value] = $output . $file;
-							}
+							$result[$value] = $output . $file;
 						}
 					}
 				}
@@ -1369,51 +1348,46 @@ class phunction_Disk extends phunction
 
 	public static function Zip($input, $output, $chmod = null)
 	{
-		if (extension_loaded('zip') === true)
+		if ((extension_loaded('zip') === true) && (($input = self::Path($input)) !== false))
 		{
-			$input = self::Path($input);
+			$zip = new ZipArchive();
 
-			if ($input !== false)
+			if ($zip->open($input) === true)
 			{
-				$zip = new ZipArchive();
+				$zip->extractTo($output);
+			}
 
-				if ($zip->open($input) === true)
+			else if ($zip->open($output, ZIPARCHIVE::CREATE) === true)
+			{
+				if (is_dir($input) === true)
 				{
-					$zip->extractTo($output);
-				}
+					$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($input), RecursiveIteratorIterator::SELF_FIRST);
 
-				else if ($zip->open($output, ZIPARCHIVE::CREATE) === true)
-				{
-					if (is_dir($input) === true)
+					foreach ($files as $file)
 					{
-						$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($input), RecursiveIteratorIterator::SELF_FIRST);
+						$file = self::Path($file);
 
-						foreach ($files as $file)
+						if (is_dir($file) === true)
 						{
-							$file = self::Path($file);
+							$zip->addEmptyDir(str_replace($input, '', $file));
+						}
 
-							if (is_dir($file) === true)
-							{
-								$zip->addEmptyDir(str_replace($input, '', $file));
-							}
-
-							else if (is_file($file) === true)
-							{
-								$zip->addFromString(str_replace($input, '', $file), self::File($file));
-							}
+						else if (is_file($file) === true)
+						{
+							$zip->addFromString(str_replace($input, '', $file), self::File($file));
 						}
 					}
-
-					else if (is_file($input) === true)
-					{
-						$zip->addFromString(basename($input), self::File($input));
-					}
 				}
 
-				if ($zip->close() === true)
+				else if (is_file($input) === true)
 				{
-					return self::Chmod($output, $chmod);
+					$zip->addFromString(basename($input), self::File($input));
 				}
+			}
+
+			if ($zip->close() === true)
+			{
+				return self::Chmod($output, $chmod);
 			}
 		}
 
@@ -1578,7 +1552,7 @@ class phunction_Is extends phunction
 		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[0-9a-z]*$~i'))) !== false) ? true : false;
 	}
 
-	public static function Email($value, $mx = true)
+	public static function Email($value, $mx = false)
 	{
 		if (filter_var($value, FILTER_VALIDATE_EMAIL) !== false)
 		{
@@ -1588,29 +1562,34 @@ class phunction_Is extends phunction
 		return false;
 	}
 
-	public static function Float($value)
+	public static function Float($value, $minimum = null, $maximum = null)
 	{
-		return (filter_var($value, FILTER_VALIDATE_FLOAT) !== false) ? true : false;
-	}
+		if (filter_var($value, FILTER_VALIDATE_FLOAT) !== false)
+		{
+			if ((isset($minimum) === true) && ($value < $minimum))
+			{
+				return false;
+			}
 
-	public static function Hash($value)
-	{
-		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^(?:[[:xdigit:]]{8})+$~'))) !== false) ? true : false;
+			if ((isset($maximum) === true) && ($value > $maximum))
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		return false;
 	}
 
 	public static function Integer($value, $minimum = null, $maximum = null)
 	{
-		return (filter_var($value, FILTER_VALIDATE_INT, array('options' => array_filter(array('min_range' => $minimum, 'max_range' => $maximum), 'strlen'))) !== false) ? true : false;
+		return (filter_var($value, FILTER_VALIDATE_INT) !== false) ? self::Float($value, $minimum, $maximum) : false;
 	}
 
 	public static function IP($value)
 	{
-		return (filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false) ? true : false;
-	}
-
-	public static function Number($value)
-	{
-		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[+-]?\d+(?:[.]\d+)?$~'))) !== false) ? true : false;
+		return (filter_var($value, FILTER_VALIDATE_IP) !== false) ? true : false;
 	}
 
 	public static function Set($value)
@@ -1940,7 +1919,7 @@ class phunction_Math extends phunction
 			return (gmp_prob_prime(abs($number)) > 0) ? true : false;
 		}
 
-		return (preg_match('~^1?$|^(11+?)\1++$~', str_repeat('1', abs($number))) + preg_last_error() === 0) ? true : false;
+		return (preg_match('~^1?$|^(11+?)\1++$~', str_repeat('1', abs($number))) + preg_last_error() == 0) ? true : false;
 	}
 
 	public static function Probability($data, $number = 1)
@@ -2154,7 +2133,7 @@ class phunction_Net extends phunction
 
 					if (preg_match('~^(?:PUT)$~i', $method) > 0)
 					{
-						curl_setopt($curl, CURLOPT_POSTFIELDS, (is_array($data) === true) ? json_encode($data) : $data);
+						curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
 					}
 				}
 
@@ -2400,9 +2379,7 @@ class phunction_Net extends phunction
 
 						if (preg_match('~^220~', $result) > 0)
 						{
-							$auth = array_slice(func_get_args(), 8, 2);
-
-							if (count($auth) == 2)
+							if (count($auth = array_slice(func_get_args(), 8, 2)) == 2)
 							{
 								$data = array_merge($data, array('AUTH LOGIN'), array_map('base64_encode', $auth));
 							}
@@ -2457,9 +2434,7 @@ class phunction_Net extends phunction
 			'sensor' => 'false',
 		);
 
-		$result = self::CURL(parent::URL('http://maps.googleapis.com/', '/maps/api/geocode/json', $data));
-
-		if ($result !== false)
+		if (($result = self::CURL(parent::URL('http://maps.googleapis.com/', '/maps/api/geocode/json', $data))) !== false)
 		{
 			return parent::Value(json_decode($result, true), array('results', 0, 'geometry', 'location'));
 		}
@@ -2478,9 +2453,7 @@ class phunction_Net extends phunction
 
 			if ($result === false)
 			{
-				$result = self::CURL('http://api.wipmania.com/' . $ip);
-
-				if ($result !== false)
+				if (($result = self::CURL('http://api.wipmania.com/' . $ip)) !== false)
 				{
 					$result = parent::Cache(vsprintf('%s:%s:%b', $key), trim($result), $ttl);
 				}
@@ -2532,35 +2505,32 @@ class phunction_Net extends phunction
 
 			foreach ($protocol as $key => $value)
 			{
-				foreach ($value as $namespace)
+				while ($namespace = array_shift($value))
 				{
-					if (is_string($namespace) === true)
-					{
-						if (is_object($xml = self::XML($result, sprintf('//xrd/service[contains(type, "http://%s")]', $namespace), 0)) === true)
-						{
-							$server = parent::Value($xml, 'uri');
-
-							if ($key === 0)
-							{
-								$delegate = parent::Value($xml, 'localid', parent::Value($xml, 'canonicalid', $id));
-
-								if (strcmp($namespace, 'specs.openid.net/auth/2.0/server') === 0)
-								{
-									$delegate = 'http://specs.openid.net/auth/2.0/identifier_select';
-								}
-							}
-
-							else if ($key === 1)
-							{
-								$delegate = parent::Value($xml, 'delegate', $id);
-							}
-						}
-					}
-
-					else if (is_array($namespace) === true)
+					if (is_array($namespace) === true)
 					{
 						$server = strval(self::XML($result, sprintf('//head/link[contains(@rel, "%s")]/@href', $namespace[0]), 0));
 						$delegate = strval(self::XML($result, sprintf('//head/link[contains(@rel, "%s")]/@href', $namespace[1]), 0, $id));
+					}
+
+					else if (is_object($xml = self::XML($result, sprintf('//xrd/service[contains(type, "http://%s")]', $namespace), 0)) === true)
+					{
+						$server = parent::Value($xml, 'uri');
+
+						if ($key === 0)
+						{
+							$delegate = 'http://specs.openid.net/auth/2.0/identifier_select';
+
+							if (strcmp($namespace, 'specs.openid.net/auth/2.0/server') !== 0)
+							{
+								$delegate = parent::Value($xml, 'localid', parent::Value($xml, 'canonicalid', $id));
+							}
+						}
+
+						else if ($key === 1)
+						{
+							$delegate = parent::Value($xml, 'delegate', $id);
+						}
 					}
 
 					if (ph()->Is->URL($server) === true)
@@ -2601,10 +2571,10 @@ class phunction_Net extends phunction
 
 		if ((is_null($result) === true) && (preg_match('~^(?:.+[.])?paypal[.]com$~', gethostbyaddr($_SERVER['REMOTE_ADDR'])) > 0))
 		{
-			$result = self::CURL('https://www' . (($sandbox !== true) ? '' : '.sandbox') . '.paypal.com/cgi-bin/webscr/', array_merge(array('cmd' => '_notify-validate'), $_POST), 'POST');
+			$result = self::CURL('https://www' . (($sandbox === true) ? '.sandbox' : '') . '.paypal.com/cgi-bin/webscr/', array_merge(array('cmd' => '_notify-validate'), $_POST), 'POST');
 		}
 
-		if (strcmp('VERIFIED', $result) === 0)
+		if (strncmp('VERIFIED', $result, 8) === 0)
 		{
 			$email = strlen($email) * strcasecmp($email, parent::Value($_POST, 'receiver_email'));
 			$status = strlen($status) * strcasecmp($status, parent::Value($_POST, 'payment_status'));
@@ -2680,17 +2650,14 @@ class phunction_Net extends phunction
 		return false;
 	}
 
-	public static function Socket($host, $port, $timeout = 15)
+	public static function Socket($host, $port, $timeout = 3)
 	{
 		$time = microtime(true);
 		$socket = @fsockopen($host, intval($port), $errno, $errstr, floatval($timeout));
 
-		if (is_resource($socket) === true)
+		if ((is_resource($socket) === true) && (fclose($socket) === true))
 		{
-			if (fclose($socket) === true)
-			{
-				return microtime(true) - $time;
-			}
+			return microtime(true) - $time;
 		}
 
 		return false;
@@ -2705,9 +2672,7 @@ class phunction_Net extends phunction
 			'langpair' => sprintf('%s|%s', $input, $output),
 		);
 
-		$result = self::CURL(parent::URL('http://ajax.googleapis.com/', '/ajax/services/language/translate', $data));
-
-		if ($result !== false)
+		if (($result = self::CURL(parent::URL('http://ajax.googleapis.com/', '/ajax/services/language/translate', $data))) !== false)
 		{
 			return parent::Value(json_decode($result, true), array('responseData', 'translatedText'));
 		}
@@ -3221,6 +3186,11 @@ class phunction_Unicode extends phunction
 		}
 
 		return $string;
+	}
+
+	public static function strcasecmp($string, $search)
+	{
+		return strcmp(self::strtolower($string), self::strtolower($search));
 	}
 
 	public static function stripos($string, $search, $offset = 0)
