@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.3.26 (github.com/alixaxel/phunction/)
+* phunction 1.3.27 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -28,7 +28,7 @@ class phunction
 
 			if (strncasecmp('www.', $_SERVER['HTTP_HOST'], 4) === 0)
 			{
-				self::Redirect(str_ireplace('://www.', '://', self::URL()), true);
+				self::Redirect(str_ireplace('://www.', '://', self::URL()), null, null, 301);
 			}
 
 			else if (strlen(session_id()) == 0)
@@ -362,17 +362,25 @@ class phunction
 		return false;
 	}
 
-	public static function Redirect($url, $permanent = false)
+	public static function Redirect($url, $path = null, $query = null, $code = 302)
 	{
-		if (headers_sent() !== true)
+		if ((headers_sent() !== true) && (preg_match('~^30[1237]$~', $code) > 0))
 		{
-			header('Location: ' . $url, true, ($permanent === true) ? 301 : 302);
+			session_regenerate_id(true);
+			session_write_close();
+
+			if (strncasecmp('cgi', PHP_SAPI, 3) === 0)
+			{
+				header(sprintf('Status: %03u', $code), true, $code);
+			}
+
+			header('Location: ' . self::URL($url, $path, $query), true, $code);
 		}
 
 		exit();
 	}
 
-	public static function Route($route, $class = null, $function = null, $method = null, $throttle = null)
+	public static function Route($route, $object = null, $callback = null, $method = null, $throttle = null)
 	{
 		static $result = null;
 
@@ -387,22 +395,22 @@ class phunction
 
 			if (preg_match('~' . rtrim(str_replace(array(':any:', ':num:'), array('[^/]+', '[0-9]+'), $route), '/') . '$~i', $result, $matches) > 0)
 			{
-				if (intval($throttle) > 0)
+				if (empty($callback) !== true)
 				{
-					usleep(intval(floatval($throttle) * 1000000));
-				}
-
-				if (empty($class) === true)
-				{
-					if (empty($function) === true)
+					if ($throttle > 0)
 					{
-						return true;
+						usleep(intval(floatval($throttle) * 1000000));
 					}
 
-					exit(call_user_func_array($function, array_slice($matches, 1)));
+					if (empty($object) !== true)
+					{
+						$callback = array(self::Object($object), $callback);
+					}
+
+					exit(call_user_func_array($callback, array_slice($matches, 1)));
 				}
 
-				exit(call_user_func_array(array(self::Object($class), $function), array_slice($matches, 1)));
+				return true;
 			}
 		}
 
@@ -998,7 +1006,7 @@ class phunction_Disk extends phunction
 
 						if (($range[0] > 0) || ($range[1] < ($size - 1)))
 						{
-							header('HTTP/1.1 206 Partial Content');
+							ph()->HTTP->Code(206, 'Partial Content');
 						}
 					}
 
@@ -1037,7 +1045,7 @@ class phunction_Disk extends phunction
 
 		else
 		{
-			header('HTTP/1.1 404 Not Found');
+			ph()->HTTP->Code(404, 'Not Found');
 		}
 
 		return false;
@@ -1066,7 +1074,7 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Image($input, $crop = null, $scale = null, $merge = null, $sharp = true, $output = null)
+	public static function Image($input, $crop = null, $scale = null, $merge = null, $output = null, $sharp = true)
 	{
 		if (isset($input, $output) === true)
 		{
@@ -1075,10 +1083,10 @@ class phunction_Disk extends phunction
 			if (is_resource($input) === true)
 			{
 				$size = array(ImageSX($input), ImageSY($input));
-				$crop = array_values(array_filter(explode('/', $crop), 'is_numeric'));
-				$scale = array_values(array_filter(explode('*', $scale), 'is_numeric'));
+				$crop = array_filter(explode('/', $crop), 'is_numeric');
+				$scale = array_filter(explode('*', $scale), 'is_numeric');
 
-				if (count($crop) == 2)
+				if (count($crop = array_values($crop)) == 2)
 				{
 					$crop = array($size[0] / $size[1], $crop[0] / $crop[1]);
 
@@ -1100,7 +1108,7 @@ class phunction_Disk extends phunction
 					$crop = array(0, 0);
 				}
 
-				if (count($scale) >= 1)
+				if (count($scale = array_values($scale)) >= 1)
 				{
 					if (empty($scale[0]) === true)
 					{
@@ -1175,7 +1183,7 @@ class phunction_Disk extends phunction
 			}
 		}
 
-		else if ((isset($input) === true) && (count($result = @GetImageSize($input)) >= 2))
+		else if (count($result = @GetImageSize($input)) >= 2)
 		{
 			return array_map('intval', array_slice($result, 0, 2));
 		}
@@ -1395,10 +1403,85 @@ class phunction_Disk extends phunction
 	}
 }
 
+class phunction_Form extends phunction
+{
+	public function __construct()
+	{
+	}
+
+	public static function Checkbox($id, $value = null, $default = null)
+	{
+		$result = array('type' => 'checkbox', 'name' => $id, 'value' => $value);
+
+		if (in_array($value, (array) parent::Value($_REQUEST, str_replace('[]', '', $id), $default)) === true)
+		{
+			$result['checked'] = true;
+		}
+
+		return $result;
+	}
+
+	public static function Input($id, $default = null, $type = 'text')
+	{
+		$result = array('type' => $type, 'name' => $id, 'value' => $default);
+
+		if (array_key_exists($id, $_REQUEST) === true)
+		{
+			$result['value'] = htmlspecialchars_decode(parent::Value($_REQUEST, $id));
+		}
+
+		return $result;
+	}
+
+	public static function Option($id, $value = null, $default = null)
+	{
+		$result = array('value' => $value);
+
+		if (in_array($value, (array) parent::Value($_REQUEST, str_replace('[]', '', $id), $default)) === true)
+		{
+			$result['selected'] = true;
+		}
+
+		return $result;
+	}
+
+	public static function Radio($id, $value = null, $default = null)
+	{
+		$result = array('type' => 'radio', 'name' => $id, 'value' => $value);
+
+		if (in_array($value, (array) parent::Value($_REQUEST, str_replace('[]', '', $id), $default)) === true)
+		{
+			$result['checked'] = true;
+		}
+
+		return $result;
+	}
+}
+
 class phunction_HTTP extends phunction
 {
 	public function __construct()
 	{
+	}
+
+	public static function Code($code = 200, $string = null, $replace = true)
+	{
+		static $result = null;
+
+		if (is_null($result) === true)
+		{
+			$result = 'Status:';
+
+			if (strncasecmp('cgi', PHP_SAPI, 3) !== 0)
+			{
+				$result = parent::Value($_SERVER, 'SERVER_PROTOCOL', 'HTTP/1.1');
+			}
+		}
+
+		if ((headers_sent() !== true) && (preg_match('~Status:|HTTP/~i', $result) > 0))
+		{
+			header(rtrim(sprintf('%s %03u %s', $result, $code, $string)), $replace, $code);
+		}
 	}
 
 	public static function Cookie($key, $value = null, $expire = null)
@@ -1670,15 +1753,15 @@ class phunction_Math extends phunction
 		return false;
 	}
 
-	public static function Benchmark($function, $arguments = null, $iterations = 10000)
+	public static function Benchmark($callback, $arguments = null, $iterations = 10000)
 	{
-		if (is_callable($function) === true)
+		if (is_callable($callback) === true)
 		{
 			$result = microtime(true);
 
 			for ($i = 1; $i <= $iterations; ++$i)
 			{
-				call_user_func_array($function, (array) $arguments);
+				call_user_func_array($callback, (array) $arguments);
 			}
 
 			return self::Round(microtime(true) - $result, 8);
@@ -2020,18 +2103,17 @@ class phunction_Net extends phunction
 		{
 			if (is_null($value) === true)
 			{
-				$result = simplexml_load_string(self::CURL('http://services.sapo.pt/Captcha/Get/'));
+				$result = self::CURL('http://services.sapo.pt/Captcha/Get/');
 
-				if (is_object($result) === true)
+				if (is_object($result = self::XML($result, '//captcha', 0)) === true)
 				{
-					$_SESSION[__METHOD__] = strval($result->code);
+					$_SESSION[__METHOD__] = parent::Value($result, 'code');
 
-					if ($result->msg == 'ok')
+					if (strcasecmp('ok', parent::Value($result, 'msg')) === 0)
 					{
-						$result = strval($result->id);
-						$background = ltrim($background, '#');
+						$result = parent::Value($result, 'id');
 
-						if (strlen($background) > 0)
+						if (strlen($background = ltrim($background, '#')) > 0)
 						{
 							$result .= sprintf('&background=%s', $background);
 
@@ -2784,61 +2866,6 @@ class phunction_Net extends phunction
 	}
 }
 
-class phunction_Tag extends phunction
-{
-	public function __construct()
-	{
-	}
-
-	public static function Checkbox($id, $value = null, $default = null)
-	{
-		$result = array('type' => 'checkbox', 'name' => $id, 'value' => $value);
-
-		if (in_array($value, (array) parent::Value($_REQUEST, str_replace('[]', '', $id), $default)) === true)
-		{
-			$result['checked'] = true;
-		}
-
-		return $result;
-	}
-
-	public static function Input($id, $default = null, $type = 'text')
-	{
-		$result = array('type' => $type, 'name' => $id, 'value' => $default);
-
-		if (array_key_exists($id, $_REQUEST) === true)
-		{
-			$result['value'] = htmlspecialchars_decode(parent::Value($_REQUEST, $id));
-		}
-
-		return $result;
-	}
-
-	public static function Option($id, $value = null, $default = null)
-	{
-		$result = array('value' => $value);
-
-		if (in_array($value, (array) parent::Value($_REQUEST, str_replace('[]', '', $id), $default)) === true)
-		{
-			$result['selected'] = true;
-		}
-
-		return $result;
-	}
-
-	public static function Radio($id, $value = null, $default = null)
-	{
-		$result = array('type' => 'radio', 'name' => $id, 'value' => $value);
-
-		if (in_array($value, (array) parent::Value($_REQUEST, str_replace('[]', '', $id), $default)) === true)
-		{
-			$result['checked'] = true;
-		}
-
-		return $result;
-	}
-}
-
 class phunction_Text extends phunction
 {
 	public function __construct()
@@ -3022,7 +3049,7 @@ class phunction_Text extends phunction
 				return sprintf('&#%s;', implode(';&#', $string));
 			}
 
-			return sprintf('<span style="unicode-bidi:bidi-override; direction: rtl;">&#%s;</span>', implode(';&#', array_reverse($string)));
+			return sprintf('<span style="unicode-bidi: bidi-override; direction: rtl;">&#%s;</span>', implode(';&#', array_reverse($string)));
 		}
 
 		return false;
