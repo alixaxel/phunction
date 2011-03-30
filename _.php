@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.3.27 (github.com/alixaxel/phunction/)
+* phunction 1.3.30 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -364,17 +364,17 @@ class phunction
 
 	public static function Redirect($url, $path = null, $query = null, $code = 302)
 	{
-		if ((headers_sent() !== true) && (preg_match('~^30[1237]$~', $code) > 0))
+		if (headers_sent() !== true)
 		{
 			session_regenerate_id(true);
 			session_write_close();
 
-			if (strncasecmp('cgi', PHP_SAPI, 3) === 0)
+			if (strncmp('cgi', PHP_SAPI, 3) === 0)
 			{
 				header(sprintf('Status: %03u', $code), true, $code);
 			}
 
-			header('Location: ' . self::URL($url, $path, $query), true, $code);
+			header('Location: ' . self::URL($url, $path, $query), true, (preg_match('~^30[1237]$~', $code) > 0) ? $code : 302);
 		}
 
 		exit();
@@ -545,10 +545,9 @@ class phunction
 
 	public static function Throttle($ttl = 60, $exit = 60, $count = 1, $proxy = false)
 	{
-		$ip = ph()->HTTP->IP(null, $proxy);
-
 		if (extension_loaded('apc') === true)
 		{
+			$ip = ph()->HTTP->IP(null, $proxy);
 			$key = array(__METHOD__, $ip, $proxy);
 
 			if (apc_exists(vsprintf('%s:%s:%b', $key)) !== true)
@@ -1083,10 +1082,10 @@ class phunction_Disk extends phunction
 			if (is_resource($input) === true)
 			{
 				$size = array(ImageSX($input), ImageSY($input));
-				$crop = array_filter(explode('/', $crop), 'is_numeric');
-				$scale = array_filter(explode('*', $scale), 'is_numeric');
+				$crop = array_values(array_filter(explode('/', $crop), 'is_numeric'));
+				$scale = array_values(array_filter(explode('*', $scale), 'is_numeric'));
 
-				if (count($crop = array_values($crop)) == 2)
+				if (count($crop) == 2)
 				{
 					$crop = array($size[0] / $size[1], $crop[0] / $crop[1]);
 
@@ -1108,7 +1107,7 @@ class phunction_Disk extends phunction
 					$crop = array(0, 0);
 				}
 
-				if (count($scale = array_values($scale)) >= 1)
+				if (count($scale) >= 1)
 				{
 					if (empty($scale[0]) === true)
 					{
@@ -1354,48 +1353,170 @@ class phunction_Disk extends phunction
 		return $result;
 	}
 
+	public static function Video($input, $crop = null, $scale = null, $output = null)
+	{
+		if (extension_loaded('ffmpeg') === true)
+		{
+			$input = @new ffmpeg_movie($input);
+
+			if ((is_object($input) === true) && ($input->hasVideo() === true))
+			{
+				$size = array($input->getFrameWidth(), $input->getFrameHeight());
+
+				if (isset($output) === true)
+				{
+					$crop = array_values(array_filter(explode('/', $crop), 'is_numeric'));
+					$scale = array_values(array_filter(explode('*', $scale), 'is_numeric'));
+
+					if ((is_callable('shell_exec') === true) && (is_executable($ffmpeg = trim(shell_exec('which ffmpeg'))) === true))
+					{
+						if (count($crop) == 2)
+						{
+							$crop = array($size[0] / $size[1], $crop[0] / $crop[1]);
+
+							if ($crop[0] > $crop[1])
+							{
+								$size[0] = round($size[1] * $crop[1]);
+							}
+
+							else if ($crop[0] < $crop[1])
+							{
+								$size[1] = round($size[0] / $crop[1]);
+							}
+
+							$crop = array(round(($input->getFrameWidth() - $size[0]) / 2) * 2, round(($input->getFrameHeight() - $size[1]) / 2) * 2);
+						}
+
+						else
+						{
+							$crop = array(0, 0);
+						}
+
+						if (count($scale) >= 1)
+						{
+							if (empty($scale[0]) === true)
+							{
+								$scale[0] = round($scale[1] * $size[0] / $size[1] / 2) * 2;
+							}
+
+							else if (empty($scale[1]) === true)
+							{
+								$scale[1] = round($scale[0] * $size[1] / $size[0] / 2) * 2;
+							}
+						}
+
+						else
+						{
+							$scale = array(round($size[0] / 2) * 2, round($size[1] / 2) * 2);
+						}
+
+						$result = array();
+
+						if (array_product($scale) > 0)
+						{
+							$result[] = sprintf('%s -i %s', escapeshellcmd($ffmpeg), escapeshellarg($input->getFileName()));
+
+							if (array_sum($crop) > 0)
+							{
+								if (stripos(shell_exec(escapeshellcmd($ffmpeg) . ' -h | grep crop'), 'removed') !== false)
+								{
+									$result[] = sprintf('-vf "crop=in_w-2*%u:in_h-2*%u"', $crop[0], $crop[1]);
+								}
+
+								else if ($crop[0] > 0)
+								{
+									$result[] = sprintf('-cropleft %u -cropright %u', $crop[0], $crop[0]);
+								}
+
+								else if ($crop[1] > 0)
+								{
+									$result[] = sprintf('-croptop %u -cropbottom %u', $crop[1], $crop[1]);
+								}
+							}
+
+							if ($input->hasAudio() === true)
+							{
+								$result[] = sprintf('-ab %u -ar %u', $input->getAudioBitRate(), $input->getAudioSampleRate());
+							}
+
+							$result[] = sprintf('-b %u -r %u -s %s', $input->getBitRate(), min(25, $input->getFrameRate()), implode('x', $scale));
+
+							if (strlen($format = strtolower(ltrim(strrchr($output, '.'), '.'))) > 0)
+							{
+								$result[] = sprintf('-f %s -y %s', $format, escapeshellarg($output . '.ffmpeg'));
+								$result[] = sprintf('&& mv -u %s %s', escapeshellarg($output . '.ffmpeg'), escapeshellarg($output));
+
+								if ((is_writable(dirname($output)) === true) && (is_resource($stream = popen('(' . implode(' ', $result) . ') 2>&1 &', 'r')) === true))
+								{
+									while (($buffer = fgets($stream)) !== false)
+									{
+										if (strpos($buffer, 'to stop encoding') !== false)
+										{
+											return (is_int(pclose($stream)) === true) ? true : false;
+										}
+									}
+
+									pclose($stream);
+								}
+							}
+						}
+					}
+
+					return false;
+				}
+
+				return $size;
+			}
+		}
+
+		return false;
+	}
+
 	public static function Zip($input, $output, $chmod = null)
 	{
-		if ((extension_loaded('zip') === true) && (($input = self::Path($input)) !== false))
+		if (extension_loaded('zip') === true)
 		{
-			$zip = new ZipArchive();
-
-			if ($zip->open($input) === true)
+			if (($input = self::Path($input)) !== false)
 			{
-				$zip->extractTo($output);
-			}
+				$zip = new ZipArchive();
 
-			else if ($zip->open($output, ZIPARCHIVE::CREATE) === true)
-			{
-				if (is_dir($input) === true)
+				if ($zip->open($input) === true)
 				{
-					$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($input), RecursiveIteratorIterator::SELF_FIRST);
+					$zip->extractTo($output);
+				}
 
-					foreach ($files as $file)
+				else if ($zip->open($output, ZIPARCHIVE::CREATE) === true)
+				{
+					if (is_dir($input) === true)
 					{
-						$file = self::Path($file);
+						$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($input), RecursiveIteratorIterator::SELF_FIRST);
 
-						if (is_dir($file) === true)
+						foreach ($files as $file)
 						{
-							$zip->addEmptyDir(str_replace($input, '', $file));
-						}
+							$file = self::Path($file);
 
-						else if (is_file($file) === true)
-						{
-							$zip->addFromString(str_replace($input, '', $file), self::File($file));
+							if (is_dir($file) === true)
+							{
+								$zip->addEmptyDir(str_replace($input, '', $file));
+							}
+
+							else if (is_file($file) === true)
+							{
+								$zip->addFromString(str_replace($input, '', $file), self::File($file));
+							}
 						}
+					}
+
+					else if (is_file($input) === true)
+					{
+						$zip->addFromString(basename($input), self::File($input));
 					}
 				}
 
-				else if (is_file($input) === true)
+				if ($zip->close() === true)
 				{
-					$zip->addFromString(basename($input), self::File($input));
+					return self::Chmod($output, $chmod);
 				}
-			}
-
-			if ($zip->close() === true)
-			{
-				return self::Chmod($output, $chmod);
 			}
 		}
 
@@ -1466,21 +1587,16 @@ class phunction_HTTP extends phunction
 
 	public static function Code($code = 200, $string = null, $replace = true)
 	{
-		static $result = null;
-
-		if (is_null($result) === true)
+		if (headers_sent() !== true)
 		{
 			$result = 'Status:';
 
-			if (strncasecmp('cgi', PHP_SAPI, 3) !== 0)
+			if (strncmp('cgi', PHP_SAPI, 3) !== 0)
 			{
 				$result = parent::Value($_SERVER, 'SERVER_PROTOCOL', 'HTTP/1.1');
 			}
-		}
 
-		if ((headers_sent() !== true) && (preg_match('~Status:|HTTP/~i', $result) > 0))
-		{
-			header(rtrim(sprintf('%s %03u %s', $result, $code, $string)), $replace, $code);
+			header(rtrim(sprintf('%s %03u %s', (preg_match('~Status:|HTTP/~i', $result) > 0) ? $result : 'HTTP/1.1', $code, $string)), $replace, $code);
 		}
 	}
 
@@ -1877,20 +1993,31 @@ class phunction_Math extends phunction
 
 	public static function Factor($number)
 	{
+		$i = 2;
 		$result = array();
 
-		for ($i = 2; $i <= $number; ++$i)
+		if (fmod($number, 1) == 0)
 		{
-			while ($number % $i == 0)
+			while ($i <= sqrt($number))
 			{
-				$number /= $i;
-
-				if (array_key_exists($i, $result) !== true)
+				while ($number % $i == 0)
 				{
-					$result[$i] = 0;
+					$number /= $i;
+
+					if (empty($result[$i]) === true)
+					{
+						$result[$i] = 0;
+					}
+
+					++$result[$i];
 				}
 
-				++$result[$i];
+				$i = (function_exists('gmp_nextprime') === true) ? gmp_strval(gmp_nextprime($i)) : ++$i;
+			}
+
+			if ($number > 1)
+			{
+				$result[$number] = 1;
 			}
 		}
 
