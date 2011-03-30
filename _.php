@@ -1077,7 +1077,10 @@ class phunction_Disk extends phunction
 	{
 		if (isset($input, $output) === true)
 		{
-			$input = @ImageCreateFromString(@file_get_contents($input));
+			if (is_string($input) === true)
+			{
+				$input = @ImageCreateFromString(@file_get_contents($input));
+			}
 
 			if (is_resource($input) === true)
 			{
@@ -1353,7 +1356,7 @@ class phunction_Disk extends phunction
 		return $result;
 	}
 
-	public static function Video($input, $crop = null, $scale = null, $output = null)
+	public static function Video($input, $crop = null, $scale = null, $image = null, $output = null, $command = null)
 	{
 		if (extension_loaded('ffmpeg') === true)
 		{
@@ -1384,7 +1387,7 @@ class phunction_Disk extends phunction
 								$size[1] = round($size[0] / $crop[1]);
 							}
 
-							$crop = array(round(($input->getFrameWidth() - $size[0]) / 2) * 2, round(($input->getFrameHeight() - $size[1]) / 2) * 2);
+							$crop = array($input->getFrameWidth() - $size[0], $input->getFrameHeight() - $size[1]);
 						}
 
 						else
@@ -1420,17 +1423,17 @@ class phunction_Disk extends phunction
 							{
 								if (stripos(shell_exec(escapeshellcmd($ffmpeg) . ' -h | grep crop'), 'removed') !== false)
 								{
-									$result[] = sprintf('-vf "crop=in_w-2*%u:in_h-2*%u"', $crop[0], $crop[1]);
+									$result[] = sprintf('-vf "crop=in_w-2*%u:in_h-2*%u"', round($crop[0] / 4) * 2, round($crop[1] / 4) * 2);
 								}
 
 								else if ($crop[0] > 0)
 								{
-									$result[] = sprintf('-cropleft %u -cropright %u', $crop[0], $crop[0]);
+									$result[] = sprintf('-cropleft %u -cropright %u', round($crop[0] / 4) * 2, round($crop[0] / 4) * 2);
 								}
 
 								else if ($crop[1] > 0)
 								{
-									$result[] = sprintf('-croptop %u -cropbottom %u', $crop[1], $crop[1]);
+									$result[] = sprintf('-croptop %u -cropbottom %u', round($crop[1] / 4) * 2, round($crop[1] / 4) * 2);
 								}
 							}
 
@@ -1443,7 +1446,13 @@ class phunction_Disk extends phunction
 
 							if (strlen($format = strtolower(ltrim(strrchr($output, '.'), '.'))) > 0)
 							{
-								$result[] = sprintf('-f %s -y %s', $format, escapeshellarg($output . '.ffmpeg'));
+								$result[] = sprintf('-f %s %s -y %s', $format, escapeshellcmd($command), escapeshellarg($output . '.ffmpeg'));
+
+								if ((strncmp('flv', $format, 3) === 0) && (is_executable($flvtool2 = trim(shell_exec('which flvtool2'))) === true))
+								{
+									$result[] = sprintf('&& %s -U %s %s', escapeshellcmd($flvtool2), escapeshellarg($output . '.ffmpeg'), escapeshellarg($output . '.ffmpeg'));
+								}
+
 								$result[] = sprintf('&& mv -u %s %s', escapeshellarg($output . '.ffmpeg'), escapeshellarg($output));
 
 								if ((is_writable(dirname($output)) === true) && (is_resource($stream = popen('(' . implode(' ', $result) . ') 2>&1 &', 'r')) === true))
@@ -1452,8 +1461,26 @@ class phunction_Disk extends phunction
 									{
 										if (strpos($buffer, 'to stop encoding') !== false)
 										{
-											return (is_int(pclose($stream)) === true) ? true : false;
+											pclose($stream);
+
+											if (isset($image) === true)
+											{
+												foreach ((array) $image as $key => $value)
+												{
+													if (is_object($frame = $input->getFrame(max(1, intval($input->getFrameCount() * (min(100, $key) / 100))))) === true)
+													{
+														self::Image($frame->toGDImage(), implode('/', $size), implode('*', $scale), null, $value, true);
+													}
+												}
+											}
+
+											return true;
 										}
+									}
+
+									if (is_file($output . '.ffmpeg') === true)
+									{
+										unlink($output . '.ffmpeg');
 									}
 
 									pclose($stream);
