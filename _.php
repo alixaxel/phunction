@@ -1356,7 +1356,7 @@ class phunction_Disk extends phunction
 		return $result;
 	}
 
-	public static function Video($input, $crop = null, $scale = null, $image = null, $output = null, $command = null)
+	public static function Video($input, $crop = null, $scale = null, $image = null, $output = null, $options = null)
 	{
 		if (extension_loaded('ffmpeg') === true)
 		{
@@ -1439,14 +1439,14 @@ class phunction_Disk extends phunction
 
 							if ($input->hasAudio() === true)
 							{
-								$result[] = sprintf('-ab %u -ar %u', $input->getAudioBitRate(), $input->getAudioSampleRate());
+								$result[] = sprintf('-ab %u -ar %u', min(131072, $input->getAudioBitRate()), $input->getAudioSampleRate());
 							}
 
-							$result[] = sprintf('-b %u -r %u -s %s', $input->getBitRate(), min(25, $input->getFrameRate()), implode('x', $scale));
+							$result[] = sprintf('-r %u -s %s -sameq', min(25, $input->getFrameRate()), implode('x', $scale));
 
 							if (strlen($format = strtolower(ltrim(strrchr($output, '.'), '.'))) > 0)
 							{
-								$result[] = sprintf('-f %s %s -y %s', $format, escapeshellcmd($command), escapeshellarg($output . '.ffmpeg'));
+								$result[] = sprintf('-f %s %s -y %s', $format, escapeshellcmd($options), escapeshellarg($output . '.ffmpeg'));
 
 								if ((strncmp('flv', $format, 3) === 0) && (is_executable($flvtool2 = trim(shell_exec('which flvtool2'))) === true))
 								{
