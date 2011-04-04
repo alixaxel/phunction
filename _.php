@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.3.30 (github.com/alixaxel/phunction/)
+* phunction 1.4.4 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1488,11 +1488,12 @@ class phunction_Disk extends phunction
 							}
 						}
 					}
-
-					return false;
 				}
 
-				return $size;
+				else if (is_null($output) === true)
+				{
+					return $size;
+				}
 			}
 		}
 
@@ -2437,14 +2438,9 @@ class phunction_Net extends phunction
 			}
 		}
 
-		if (is_array($result) === true)
+		if ((is_array($result) === true) && (isset($result[$input], $result[$output]) === true))
 		{
-			if (isset($result[$input], $result[$output]) === true)
-			{
-				return floatval($value) * $result[$input] / $result[$output];
-			}
-
-			return floatval($value);
+			return floatval($value) * $result[$input] / $result[$output];
 		}
 
 		return false;
