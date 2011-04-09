@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.4.4 (github.com/alixaxel/phunction/)
+* phunction 1.4.10 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1613,6 +1613,47 @@ class phunction_HTTP extends phunction
 	{
 	}
 
+	public static function Cart($id = null, $sku = null, $name = null, $price = null, $quantity = null, $attributes = null)
+	{
+		if (strlen(session_id()) > 0)
+		{
+			if (empty($_SESSION[__METHOD__]) === true)
+			{
+				$_SESSION[__METHOD__] = array();
+			}
+
+			if (isset($sku, $name, $price, $quantity) === true)
+			{
+				if ((is_array($attributes = (array) $attributes) === true) && (ksort($attributes) === true))
+				{
+					$id = implode('|', array_map('md5', array($sku, json_encode($attributes))));
+
+					foreach (array('sku', 'name', 'price', 'quantity', 'attributes') as $value)
+					{
+						$_SESSION[__METHOD__][$id][$value] = $$value;
+					}
+				}
+			}
+
+			else if (array_key_exists($id, $_SESSION[__METHOD__]) === true)
+			{
+				if (($_SESSION[__METHOD__][$id]['quantity'] = intval($quantity)) <= 0)
+				{
+					$_SESSION[__METHOD__][$id] = null;
+				}
+			}
+
+			if (count($_SESSION[__METHOD__] = array_filter($_SESSION[__METHOD__], 'count')) > 0)
+			{
+				ksort($_SESSION[__METHOD__]);
+			}
+
+			return $_SESSION[__METHOD__];
+		}
+
+		return false;
+	}
+
 	public static function Code($code = 200, $string = null, $replace = true)
 	{
 		if (headers_sent() !== true)
@@ -1709,7 +1750,7 @@ class phunction_HTTP extends phunction
 		{
 			if ($ajax === true)
 			{
-				return (strcasecmp('XMLHttpRequest', parent::Value($_SERVER, 'HTTP_X_REQUESTED_WITH')) === 0) ? true : false;
+				return (strcasecmp('XMLHttpRequest', parent::Value($_SERVER, 'HTTP_X_REQUESTED_WITH')) === 0);
 			}
 
 			return true;
