@@ -488,7 +488,7 @@ class phunction
 			}
 		}
 
-		if (in_array($tag, array('br', 'hr', 'img', 'input', 'link', 'meta')) === true)
+		if (in_array($tag, explode('|', 'area|base|basefont|br|col|frame|hr|img|input|link|meta|param')) === true)
 		{
 			return sprintf('<%s%s />', $tag, implode('', $attributes)) . "\n";
 		}
@@ -1643,7 +1643,7 @@ class phunction_HTTP extends phunction
 				}
 			}
 
-			if (count($_SESSION[__METHOD__] = array_filter($_SESSION[__METHOD__], 'count')) > 0)
+			if (count($_SESSION[__METHOD__] = array_filter($_SESSION[__METHOD__], 'count')) > 1)
 			{
 				ksort($_SESSION[__METHOD__]);
 			}
@@ -2020,15 +2020,20 @@ class phunction_Math extends phunction
 
 	public static function Deviation()
 	{
-		$result = self::Average(func_get_args());
-		$arguments = parent::Flatten(func_get_args());
-
-		foreach ($arguments as $key => $value)
+		if (function_exists('stats_standard_deviation') !== true)
 		{
-			$arguments[$key] = pow($value - $result, 2);
+			$result = self::Average(func_get_args());
+			$arguments = parent::Flatten(func_get_args());
+
+			foreach ($arguments as $key => $value)
+			{
+				$arguments[$key] = pow($value - $result, 2);
+			}
+
+			return sqrt(self::Average($arguments));
 		}
 
-		return sqrt(self::Average($arguments));
+		return stats_standard_deviation(parent::Flatten(func_get_args()));
 	}
 
 	public static function Enum($id)
@@ -2228,6 +2233,30 @@ class phunction_Math extends phunction
 		}
 
 		return $result;
+	}
+
+	public static function Rating($negative = 0, $positive = 0, $decay = 0, $confidence = 95)
+	{
+		if (function_exists('stats_cdf_normal') === true)
+		{
+			$score = pow(stats_cdf_normal(max(0, min(100, floatval($confidence))) / 100, 0, 1, 2), 2);
+
+			if (($sum = $negative + $positive) > 0)
+			{
+				$p = $positive / $sum;
+
+				if (($decay = pow($decay, 0.5)) > 0)
+				{
+					return (($p + $score / (2 * $sum) - sqrt($score) * sqrt(($p * (1 - $p) + $score / (4 * $sum)) / $sum)) / (1 + $score / $sum)) / $decay;
+				}
+
+				return ($p + $score / (2 * $sum) - sqrt($score) * sqrt(($p * (1 - $p) + $score / (4 * $sum)) / $sum)) / (1 + $score / $sum);
+			}
+
+			return 0;
+		}
+
+		return false;
 	}
 
 	public static function Regression($data, $number = null)
@@ -3120,16 +3149,20 @@ class phunction_Text extends phunction
 		return strlen(count_chars($string, 3)) * 100 / 256;
 	}
 
+	public static function Feed($feed, $entries)
+	{
+	}
+
 	public static function Filter($string, $control = true)
 	{
 		$string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
 
-		if ($control !== true)
+		if ($control === true)
 		{
-			return preg_replace(array('~\r[\n]?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $string);
+			return preg_replace('~\p{C}+~u', '', $string);
 		}
 
-		return preg_replace('~\p{C}+~u', '', $string);
+		return preg_replace(array('~\r[\n]?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $string);
 	}
 
 	public static function GUID()
