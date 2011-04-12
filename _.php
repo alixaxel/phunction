@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.4.10 (github.com/alixaxel/phunction/)
+* phunction 1.4.12 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1293,12 +1293,12 @@ class phunction_Disk extends phunction
 
 		if ((isset($unit) === true) && ($result > 0))
 		{
-			if (($unit = array_search($unit, array('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'), true)) === false)
+			if (($unit = array_search($unit, array('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'), true)) === false)
 			{
 				$unit = intval(log($result, 1024));
 			}
 
-			$result = array($result / pow(1024, $unit), parent::Value(array('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'), $unit));
+			$result = array($result / pow(1024, $unit), parent::Value(array('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'), $unit));
 		}
 
 		return $result;
@@ -2235,28 +2235,24 @@ class phunction_Math extends phunction
 		return $result;
 	}
 
-	public static function Rating($negative = 0, $positive = 0, $decay = 0, $confidence = 95)
+	public static function Rating($negative = 0, $positive = 0, $decay = 0, $power = 95)
 	{
-		if (function_exists('stats_cdf_normal') === true)
+		$power = max(0, min(100, floatval($power))) / 100;
+		$score = (function_exists('stats_cdf_normal') === true) ? stats_cdf_normal($power, 0, 1, 2) : ($power * 0.03115085 - 1.55754263);
+
+		if (($n = $negative + $positive) > 0)
 		{
-			$score = pow(stats_cdf_normal(max(0, min(100, floatval($confidence))) / 100, 0, 1, 2), 2);
+			$p = $positive / $n;
 
-			if (($sum = $negative + $positive) > 0)
+			if (($decay = pow($decay, 0.5)) > 0)
 			{
-				$p = $positive / $sum;
-
-				if (($decay = pow($decay, 0.5)) > 0)
-				{
-					return (($p + $score / (2 * $sum) - sqrt($score) * sqrt(($p * (1 - $p) + $score / (4 * $sum)) / $sum)) / (1 + $score / $sum)) / $decay;
-				}
-
-				return ($p + $score / (2 * $sum) - sqrt($score) * sqrt(($p * (1 - $p) + $score / (4 * $sum)) / $sum)) / (1 + $score / $sum);
+				return (($p + $score * $score / (2 * $n) - $score * sqrt(($p * (1 - $p) + $score * $score / (4 * $n)) / $n)) / (1 + $score * $score / $n)) / $decay;
 			}
 
-			return 0;
+			return ($p + $score * $score / (2 * $n) - $score * sqrt(($p * (1 - $p) + $score * $score / (4 * $n)) / $n)) / (1 + $score * $score / $n);
 		}
 
-		return false;
+		return 0;
 	}
 
 	public static function Regression($data, $number = null)
