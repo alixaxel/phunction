@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.4.12 (github.com/alixaxel/phunction/)
+* phunction 1.4.21 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -44,10 +44,10 @@ class phunction
 
 		else if ((version_compare(PHP_VERSION, '6.0.0', '<') === true) && (get_magic_quotes_gpc() === 1))
 		{
-			$_GET = json_decode(stripslashes(json_encode($_GET, JSON_HEX_APOS | JSON_HEX_QUOT)), true);
-			$_POST = json_decode(stripslashes(json_encode($_POST, JSON_HEX_APOS | JSON_HEX_QUOT)), true);
-			$_COOKIE = json_decode(stripslashes(json_encode($_COOKIE, JSON_HEX_APOS | JSON_HEX_QUOT)), true);
-			$_REQUEST = json_decode(stripslashes(json_encode($_REQUEST, JSON_HEX_APOS | JSON_HEX_QUOT)), true);
+			$_GET = json_decode(stripslashes(preg_replace('~\\\(?:0|a|b|f|n|r|t|v)~', '\\\$0', json_encode($_GET, JSON_HEX_APOS | JSON_HEX_QUOT))), true);
+			$_POST = json_decode(stripslashes(preg_replace('~\\\(?:0|a|b|f|n|r|t|v)~', '\\\$0', json_encode($_POST, JSON_HEX_APOS | JSON_HEX_QUOT))), true);
+			$_COOKIE = json_decode(stripslashes(preg_replace('~\\\(?:0|a|b|f|n|r|t|v)~', '\\\$0', json_encode($_COOKIE, JSON_HEX_APOS | JSON_HEX_QUOT))), true);
+			$_REQUEST = json_decode(stripslashes(preg_replace('~\\\(?:0|a|b|f|n|r|t|v)~', '\\\$0', json_encode($_REQUEST, JSON_HEX_APOS | JSON_HEX_QUOT))), true);
 		}
 
 		$GLOBALS['_PUT'] = (strcasecmp('PUT', $_SERVER['REQUEST_METHOD']) === 0) ? file_get_contents('php://input') : null;
@@ -3143,10 +3143,6 @@ class phunction_Text extends phunction
 	public static function Entropy($string)
 	{
 		return strlen(count_chars($string, 3)) * 100 / 256;
-	}
-
-	public static function Feed($feed, $entries)
-	{
 	}
 
 	public static function Filter($string, $control = true)
