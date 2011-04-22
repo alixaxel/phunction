@@ -81,14 +81,9 @@ class phunction
 	{
 		if (extension_loaded('apc') === true)
 		{
-			if (isset($value) === true)
+			if ((isset($value) === true) && (apc_store($key, $value, intval($ttl)) !== true))
 			{
-				if ((strncmp('cli', PHP_SAPI, 3) === 0) && (ini_get('apc.enable_cli') != 1))
-				{
-					return $value;
-				}
-
-				apc_store($key, $value, intval($ttl));
+				return $value;
 			}
 
 			return apc_fetch($key);
