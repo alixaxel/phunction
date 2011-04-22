@@ -195,24 +195,27 @@ class phunction
 	{
 		foreach (func_get_args() as $argument)
 		{
-			echo '<pre style="background: #df0; margin: 5px; padding: 5px; text-align: left;">';
-
 			if (is_resource($argument) === true)
 			{
-				echo sprintf('%s (#%u)', get_resource_type($argument), $argument);
+				$result = sprintf('%s (#%u)', get_resource_type($argument), $argument);
 			}
 
 			else if ((is_array($argument) === true) || (is_object($argument) === true))
 			{
-				echo htmlspecialchars(print_r($argument, true), ENT_QUOTES);
+				$result = print_r($argument, true);
 			}
 
 			else
 			{
-				echo htmlspecialchars(stripslashes(preg_replace("~^'|'$~", '', var_export($argument, true))), ENT_QUOTES);
+				$result = stripslashes(preg_replace("~^'|'$~", '', var_export($argument, true)));
 			}
 
-			echo '</pre>' . "\n";
+			if (strncmp('cli', PHP_SAPI, 3) !== 0)
+			{
+				$result = '<pre style="background: #df0; margin: 5px; padding: 5px; text-align: left;">' . htmlspecialchars($result, ENT_QUOTES) . '</pre>';
+			}
+
+			ph()->HTTP->Flush($result . "\n");
 		}
 	}
 
