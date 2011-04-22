@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.4.22 (github.com/alixaxel/phunction/)
+* phunction 1.4.23 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -83,6 +83,11 @@ class phunction
 		{
 			if (isset($value) === true)
 			{
+				if ((strncmp('cli', PHP_SAPI, 3) === 0) && (ini_get('apc.enable_cli') != 1))
+				{
+					return $value;
+				}
+
 				apc_store($key, $value, intval($ttl));
 			}
 
