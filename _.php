@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.4.21 (github.com/alixaxel/phunction/)
+* phunction 1.4.22 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -22,11 +22,11 @@ class phunction
 		ini_set('display_errors', 1);
 		date_default_timezone_set('GMT');
 
-		if (headers_sent() !== true)
+		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
 		{
 			header('Content-Type: text/html; charset=utf-8');
 
-			if (strncasecmp('www.', $_SERVER['HTTP_HOST'], 4) === 0)
+			if (strncasecmp('www.', self::Value($_SERVER, 'HTTP_HOST'), 4) === 0)
 			{
 				self::Redirect(str_ireplace('://www.', '://', self::URL()), null, null, 301);
 			}
@@ -50,7 +50,7 @@ class phunction
 			$_REQUEST = json_decode(stripslashes(preg_replace('~\\\(?:0|a|b|f|n|r|t|v)~', '\\\$0', json_encode($_REQUEST, JSON_HEX_APOS | JSON_HEX_QUOT))), true);
 		}
 
-		$GLOBALS['_PUT'] = (strcasecmp('PUT', $_SERVER['REQUEST_METHOD']) === 0) ? file_get_contents('php://input') : null;
+		$GLOBALS['_PUT'] = (strcasecmp('PUT', self::Value($_SERVER, 'REQUEST_METHOD')) === 0) ? file_get_contents('php://input') : null;
 	}
 
 	public function __get($key)
@@ -364,33 +364,36 @@ class phunction
 
 	public static function Redirect($url, $path = null, $query = null, $code = 302)
 	{
-		if (headers_sent() !== true)
+		if (strncmp('cli', PHP_SAPI, 3) !== 0)
 		{
-			session_regenerate_id(true);
-			session_write_close();
-
-			if (strncmp('cgi', PHP_SAPI, 3) === 0)
+			if (headers_sent() !== true)
 			{
-				header(sprintf('Status: %03u', $code), true, $code);
+				session_regenerate_id(true);
+				session_write_close();
+
+				if (strncmp('cgi', PHP_SAPI, 3) === 0)
+				{
+					header(sprintf('Status: %03u', $code), true, $code);
+				}
+
+				header('Location: ' . self::URL($url, $path, $query), true, (preg_match('~^30[1237]$~', $code) > 0) ? $code : 302);
 			}
 
-			header('Location: ' . self::URL($url, $path, $query), true, (preg_match('~^30[1237]$~', $code) > 0) ? $code : 302);
+			exit();
 		}
-
-		exit();
 	}
 
 	public static function Route($route, $object = null, $callback = null, $method = null, $throttle = null)
 	{
 		static $result = null;
 
-		if (strlen($method) * strcasecmp($method, $_SERVER['REQUEST_METHOD']) == 0)
+		if ((strlen($method) * strcasecmp($method, self::Value($_SERVER, 'REQUEST_METHOD'))) == 0)
 		{
 			$matches = array();
 
 			if (is_null($result) === true)
 			{
-				$result = rtrim(preg_replace('~/+~', '/', substr($_SERVER['PHP_SELF'], strlen($_SERVER['SCRIPT_NAME']))), '/');
+				$result = rtrim(preg_replace('~/+~', '/', substr(self::Value($_SERVER, 'PHP_SELF'), strlen(self::Value($_SERVER, 'SCRIPT_NAME')))), '/');
 			}
 
 			if (preg_match('~' . rtrim(str_replace(array(':any:', ':num:'), array('[^/]+', '[0-9]+'), $route), '/') . '$~i', $result, $matches) > 0)
@@ -423,7 +426,7 @@ class phunction
 
 		if (is_null($result) === true)
 		{
-			$result = array_values(array_filter(explode('/', substr($_SERVER['PHP_SELF'], strlen($_SERVER['SCRIPT_NAME']))), 'strlen'));
+			$result = array_values(array_filter(explode('/', substr(self::Value($_SERVER, 'PHP_SELF'), strlen(self::Value($_SERVER, 'SCRIPT_NAME')))), 'strlen'));
 		}
 
 		return self::Value($result, (is_int($key) === true) ? $key : (array_search($key, $result) + 1), $default);
@@ -624,7 +627,7 @@ class phunction
 			return false;
 		}
 
-		return self::URL(getservbyport($_SERVER['SERVER_PORT'], 'tcp') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'], $path, $query);
+		return self::URL(getservbyport(self::Value($_SERVER, 'SERVER_PORT', 80), 'tcp') . '://' . self::Value($_SERVER, 'HTTP_HOST') . self::Value($_SERVER, 'REQUEST_URI'), $path, $query);
 	}
 
 	public static function Value($data, $key = null, $default = false)
@@ -969,82 +972,85 @@ class phunction_Disk extends phunction
 
 	public static function Download($path, $speed = null, $multipart = false)
 	{
-		if (is_file($path) === true)
+		if (strncmp('cli', PHP_SAPI, 3) !== 0)
 		{
-			while (ob_get_level() > 0)
+			if (is_file($path) === true)
 			{
-				ob_end_clean();
-			}
-
-			$file = @fopen($path, 'rb');
-			$size = sprintf('%u', filesize($path));
-			$speed = (empty($speed) === true) ? 1024 : floatval($speed);
-
-			if (is_resource($file) === true)
-			{
-				set_time_limit(0);
-				session_write_close();
-
-				if ($multipart === true)
+				while (ob_get_level() > 0)
 				{
-					$range = array(0, $size - 1);
+					ob_end_clean();
+				}
 
-					if (array_key_exists('HTTP_RANGE', $_SERVER) === true)
+				$file = @fopen($path, 'rb');
+				$size = sprintf('%u', filesize($path));
+				$speed = (empty($speed) === true) ? 1024 : floatval($speed);
+
+				if (is_resource($file) === true)
+				{
+					set_time_limit(0);
+					session_write_close();
+
+					if ($multipart === true)
 					{
-						$range = array_map('intval', explode('-', preg_replace('~.*=([^,]*).*~', '$1', $_SERVER['HTTP_RANGE'])));
+						$range = array(0, $size - 1);
 
-						if (empty($range[1]) === true)
+						if (array_key_exists('HTTP_RANGE', $_SERVER) === true)
 						{
-							$range[1] = $size - 1;
+							$range = array_map('intval', explode('-', preg_replace('~.*=([^,]*).*~', '$1', $_SERVER['HTTP_RANGE'])));
+
+							if (empty($range[1]) === true)
+							{
+								$range[1] = $size - 1;
+							}
+
+							foreach ($range as $key => $value)
+							{
+								$range[$key] = max(0, min($value, $size - 1));
+							}
+
+							if (($range[0] > 0) || ($range[1] < ($size - 1)))
+							{
+								ph()->HTTP->Code(206, 'Partial Content');
+							}
 						}
 
-						foreach ($range as $key => $value)
-						{
-							$range[$key] = max(0, min($value, $size - 1));
-						}
-
-						if (($range[0] > 0) || ($range[1] < ($size - 1)))
-						{
-							ph()->HTTP->Code(206, 'Partial Content');
-						}
+						header('Accept-Ranges: bytes');
+						header('Content-Range: bytes ' . sprintf('%u-%u/%u', $range[0], $range[1], $size));
 					}
 
-					header('Accept-Ranges: bytes');
-					header('Content-Range: bytes ' . sprintf('%u-%u/%u', $range[0], $range[1], $size));
+					else
+					{
+						$range = array(0, $size - 1);
+					}
+
+					header('Pragma: public');
+					header('Cache-Control: public, no-cache');
+					header('Content-Type: application/octet-stream');
+					header('Content-Length: ' . sprintf('%u', $range[1] - $range[0] + 1));
+					header('Content-Disposition: attachment; filename="' . basename($path) . '"');
+					header('Content-Transfer-Encoding: binary');
+
+					if ($range[0] > 0)
+					{
+						fseek($file, $range[0]);
+					}
+
+					while ((feof($file) !== true) && (connection_status() === CONNECTION_NORMAL))
+					{
+						ph()->HTTP->Flush(fread($file, round($speed * 1024)));
+						ph()->HTTP->Sleep(1);
+					}
+
+					fclose($file);
 				}
 
-				else
-				{
-					$range = array(0, $size - 1);
-				}
-
-				header('Pragma: public');
-				header('Cache-Control: public, no-cache');
-				header('Content-Type: application/octet-stream');
-				header('Content-Length: ' . sprintf('%u', $range[1] - $range[0] + 1));
-				header('Content-Disposition: attachment; filename="' . basename($path) . '"');
-				header('Content-Transfer-Encoding: binary');
-
-				if ($range[0] > 0)
-				{
-					fseek($file, $range[0]);
-				}
-
-				while ((feof($file) !== true) && (connection_status() === CONNECTION_NORMAL))
-				{
-					ph()->HTTP->Flush(fread($file, round($speed * 1024)));
-					ph()->HTTP->Sleep(1);
-				}
-
-				fclose($file);
+				exit();
 			}
 
-			exit();
-		}
-
-		else
-		{
-			ph()->HTTP->Code(404, 'Not Found');
+			else
+			{
+				ph()->HTTP->Code(404, 'Not Found');
+			}
 		}
 
 		return false;
@@ -1656,7 +1662,7 @@ class phunction_HTTP extends phunction
 
 	public static function Code($code = 200, $string = null, $replace = true)
 	{
-		if (headers_sent() !== true)
+		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
 		{
 			$result = 'Status:';
 
@@ -1688,11 +1694,11 @@ class phunction_HTTP extends phunction
 	{
 		static $i = 0;
 
-		if (headers_sent() !== true)
+		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
 		{
 			$type = (in_array($type, array('LOG', 'INFO', 'WARN', 'ERROR')) === true) ? $type : 'LOG';
 
-			if ((strpos($_SERVER['HTTP_USER_AGENT'], 'FirePHP') !== false) && (strcmp($_SERVER['SERVER_ADDR'], $_SERVER['REMOTE_ADDR']) === 0))
+			if (strpos(parent::Value($_SERVER, 'HTTP_USER_AGENT'), 'FirePHP') !== false)
 			{
 				$message = json_encode(array(array('Type' => $type, 'Label' => $label), $message));
 
@@ -2522,7 +2528,7 @@ class phunction_Net extends phunction
 			$header = array
 			(
 				'Date' => parent::Date('r'),
-				'Message-ID' => sprintf('<%s@%s>', md5(microtime(true)), $_SERVER['HTTP_HOST']),
+				'Message-ID' => sprintf('<%s@%s>', md5(microtime(true)), parent::Value($_SERVER, 'HTTP_HOST', 'localhost')),
 				'MIME-Version' => '1.0',
 			);
 
@@ -2672,7 +2678,7 @@ class phunction_Net extends phunction
 
 					if (is_resource($stream) === true)
 					{
-						$data = array('HELO ' . $_SERVER['HTTP_HOST']);
+						$data = array('HELO ' . parent::Value($_SERVER, 'HTTP_HOST', 'localhost'));
 						$result .= substr(ltrim(fread($stream, 8192)), 0, 3);
 
 						if (preg_match('~^220~', $result) > 0)
@@ -2867,7 +2873,7 @@ class phunction_Net extends phunction
 	{
 		static $result = null;
 
-		if ((is_null($result) === true) && (preg_match('~^(?:.+[.])?paypal[.]com$~', gethostbyaddr($_SERVER['REMOTE_ADDR'])) > 0))
+		if ((is_null($result) === true) && (preg_match('~^(?:.+[.])?paypal[.]com$~', gethostbyaddr(ph()->HTTP->IP(null, false))) > 0))
 		{
 			$result = self::CURL('https://www' . (($sandbox === true) ? '.sandbox' : '') . '.paypal.com/cgi-bin/webscr/', array_merge(array('cmd' => '_notify-validate'), $_POST), 'POST');
 		}
