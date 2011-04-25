@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.4.23 (github.com/alixaxel/phunction/)
+* phunction 1.4.25 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -202,7 +202,7 @@ class phunction
 
 			else if ((is_array($argument) === true) || (is_object($argument) === true))
 			{
-				$result = print_r($argument, true);
+				$result = rtrim(print_r($argument, true));
 			}
 
 			else
@@ -1149,12 +1149,9 @@ class phunction_Disk extends phunction
 					{
 						$result = false;
 
-						if (empty($sharp) !== true)
+						if ((empty($sharp) !== true) && (is_array($matrix = array_fill(0, 9, -1)) === true))
 						{
-							if (is_array($matrix = array_fill(0, 9, -1)) === true)
-							{
-								array_splice($matrix, 4, 1, (is_int($sharp) === true) ? $sharp : 16);
-							}
+							array_splice($matrix, 4, 1, (is_int($sharp) === true) ? $sharp : 16);
 
 							if (function_exists('ImageConvolution') === true)
 							{
@@ -1162,14 +1159,9 @@ class phunction_Disk extends phunction
 							}
 						}
 
-						if (isset($merge) === true)
+						if ((isset($merge) === true) && (is_resource($merge = @ImageCreateFromString(@file_get_contents($merge))) === true))
 						{
-							$merge = @ImageCreateFromString(@file_get_contents($merge));
-
-							if (is_resource($merge) === true)
-							{
-								ImageCopy($image, $merge, round(0.95 * $scale[0] - ImageSX($merge)), round(0.95 * $scale[1] - ImageSY($merge)), 0, 0, ImageSX($merge), ImageSY($merge));
-							}
+							ImageCopy($image, $merge, round(0.95 * $scale[0] - ImageSX($merge)), round(0.95 * $scale[1] - ImageSY($merge)), 0, 0, ImageSX($merge), ImageSY($merge));
 						}
 
 						foreach (array('gif' => 0, 'png' => 9, 'jpe?g' => 90) as $key => $value)
@@ -2772,6 +2764,16 @@ class phunction_Net extends phunction
 		return (geoip_db_avail(GEOIP_COUNTRY_EDITION) === true) ? geoip_country_code_by_name($ip) : false;
 	}
 
+	public static function Gravatar($id, $size = 80, $rating = 'g', $default = 'identicon', $secure = null)
+	{
+		if (($secure === true) || ((is_null($secure) === true) && (strcasecmp('off', parent::Value($_SERVER, 'HTTPS', 'off')) !== 0)))
+		{
+			return sprintf('https://secure.gravatar.com/avatar/%s?s=%u&r=%s&d=%s', md5(strtolower(trim($id))), $size, $rating, urlencode($default));
+		}
+
+		return sprintf('http://www.gravatar.com/avatar/%s?s=%u&r=%s&d=%s', md5(strtolower(trim($id))), $size, $rating, urlencode($default));
+	}
+
 	public static function OpenID($id, $realm = null, $return = null, $verify = true)
 	{
 		$data = array();
@@ -2965,6 +2967,26 @@ class phunction_Net extends phunction
 		if ((is_resource($socket) === true) && (fclose($socket) === true))
 		{
 			return microtime(true) - $time;
+		}
+
+		return false;
+	}
+
+	public static function TinySRC($image, $scale = null, $format = null)
+	{
+		if (is_file($image) === true)
+		{
+			$image = ph()->URL(null, $image);
+		}
+
+		if (ph()->Is->URL($image) === true)
+		{
+			if (strlen($scale = implode('/', array_slice(explode('*', $scale), 0, 2))) > 0)
+			{
+				return sprintf('http://i.tinysrc.mobi/%s%s/%s', ltrim($format . '/', '/'), $scale, $image);
+			}
+
+			return sprintf('http://i.tinysrc.mobi/%s%s', ltrim($format . '/', '/'), $image);
 		}
 
 		return false;
