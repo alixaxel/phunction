@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.4.25 (github.com/alixaxel/phunction/)
+* phunction 1.4.28 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -75,6 +75,15 @@ class phunction
 		}
 
 		return self::Value($result, array($resource, $action, $role));
+	}
+
+	public static function Auth()
+	{
+		if (strlen(session_id()) > 0)
+		{
+		}
+
+		return false;
 	}
 
 	public static function Cache($key, $value = null, $ttl = 60)
@@ -598,7 +607,12 @@ class phunction
 				{
 					if (is_scalar($path) === true)
 					{
-						$url['path'] = '/' . ltrim($path, '/');
+						if (($query !== false) && (preg_match('~[?&]~', $path) > 0))
+						{
+							$url['query'] = ltrim(rtrim(self::Value($url, 'query'), '&') . '&' . preg_replace('~^.*?[?&]([^#]*).*$~', '$1', $path), '&');
+						}
+
+						$url['path'] = '/' . ltrim(preg_replace('~^(.*?)[?&#].*$~', '$1', $path), '/');
 					}
 
 					while (preg_match('~/[.][.]?(?:/|$)~', $url['path']) > 0)
@@ -2974,22 +2988,12 @@ class phunction_Net extends phunction
 
 	public static function TinySRC($image, $scale = null, $format = null)
 	{
-		if (is_file($image) === true)
+		if (ph()->Is->URL($image) !== true)
 		{
-			$image = ph()->URL(null, $image);
+			$image = ph()->URL(null, $image, false);
 		}
 
-		if (ph()->Is->URL($image) === true)
-		{
-			if (strlen($scale = implode('/', array_slice(explode('*', $scale), 0, 2))) > 0)
-			{
-				return sprintf('http://i.tinysrc.mobi/%s%s/%s', ltrim($format . '/', '/'), $scale, $image);
-			}
-
-			return sprintf('http://i.tinysrc.mobi/%s%s', ltrim($format . '/', '/'), $image);
-		}
-
-		return false;
+		return sprintf('http://i.tinysrc.mobi/%s%s%s', ltrim($format . '/', '/'), ltrim(implode('/', array_slice(explode('*', $scale), 0, 2)) . '/', '/'), $image);
 	}
 
 	public static function Translate($string, $input = null, $output = null)
