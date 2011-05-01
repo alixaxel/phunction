@@ -81,7 +81,7 @@ class phunction
 	{
 		if (strlen(session_id()) > 0)
 		{
-			if (isset($id, $role) === true)
+			if ((isset($role) === true) && ((empty($_SESSION[__METHOD__]) === true) || (session_regenerate_id(true) === true)))
 			{
 				$_SESSION[__METHOD__] = array($id => $role);
 			}
