@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.4.28 (github.com/alixaxel/phunction/)
+* phunction 1.4.29 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -65,22 +65,28 @@ class phunction
 		return false;
 	}
 
-	public static function ACL($resource, $action, $role, $access = null)
+	public static function ACL($resource, $action, $role, $auth = null)
 	{
 		static $result = array();
 
-		if (is_bool($access) === true)
+		if (is_bool($auth) === true)
 		{
-			$result[$resource][$action][$role] = $access;
+			$result[$resource][$action][$role] = $auth;
 		}
 
 		return self::Value($result, array($resource, $action, $role));
 	}
 
-	public static function Auth()
+	public static function Auth($id = null, $role = null)
 	{
 		if (strlen(session_id()) > 0)
 		{
+			if (isset($id, $role) === true)
+			{
+				$_SESSION[__METHOD__] = array($id => $role);
+			}
+
+			return (current($result = (array) self::Value($_SESSION, __METHOD__)) !== false) ? $result : false;
 		}
 
 		return false;
@@ -2990,7 +2996,7 @@ class phunction_Net extends phunction
 	{
 		if (ph()->Is->URL($image) !== true)
 		{
-			$image = ph()->URL(null, $image, false);
+			$image = ph()->URL(null, $image);
 		}
 
 		return sprintf('http://i.tinysrc.mobi/%s%s%s', ltrim($format . '/', '/'), ltrim(implode('/', array_slice(explode('*', $scale), 0, 2)) . '/', '/'), $image);
