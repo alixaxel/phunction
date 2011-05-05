@@ -295,6 +295,34 @@ class phunction
 		return $result;
 	}
 
+	public static function Highway($path)
+	{
+		if ((is_dir($path = ph()->Disk->Path($path)) === true) && (count($segments = self::Segment(null)) > 0))
+		{
+			$class = null;
+
+			while ((is_null($segment = array_shift($segments)) !== true) && (is_dir($path . $class . $segment . '/') === true))
+			{
+				$class .= $segment . '/';
+			}
+
+			if (count($class = array_filter(glob($path . $class . '{,_}' . $segment . '.php', GLOB_BRACE), 'is_file')) > 0)
+			{
+				$class = preg_replace('~[.]php$~i', '', current($class));
+				$method = (count($segments) > 0) ? array_shift($segments) : self::Value($_SERVER, 'REQUEST_METHOD', 'GET');
+
+				if (is_callable(array(self::Object($class), strtolower($method))) === true)
+				{
+					exit(call_user_func_array(array(self::Object($class), strtolower($method)), $segments));
+				}
+			}
+
+			throw new Exception('/' . implode('/', self::Segment(null)), 404);
+		}
+
+		return false;
+	}
+
 	public static function Input($input, $filters = null, $callbacks = null, $required = true)
 	{
 		if (array_key_exists($input, $_REQUEST) === true)
@@ -521,13 +549,13 @@ class phunction
 
 		if (extension_loaded('gettext') === true)
 		{
-			if (defined('LC_MESSAGES') === true)
-			{
-				setlocale(LC_MESSAGES, 'en_US');
-			}
-
 			foreach (array('LANG', 'LANGUAGE', 'LC_ALL', 'LC_MESSAGES') as $value)
 			{
+				if (defined($value) === true)
+				{
+					setlocale(constant($value), 'en_US');
+				}
+
 				putenv(sprintf('%s=%s', $value, 'en_US'));
 			}
 
@@ -2889,6 +2917,45 @@ class phunction_Net extends phunction
 			if (($email == 0) && ($status == 0))
 			{
 				return (object) $_POST;
+			}
+		}
+
+		return false;
+	}
+
+	public static function Reducisaurus($input, $type = null, $output = null, $chmod = null, $ttl = 3600)
+	{
+		if (isset($input, $type) === true)
+		{
+			$data = array_fill_keys(array('max-age', 'expire_urls'), intval($ttl));
+
+			foreach ((array) $input as $value)
+			{
+				$data['url' . (count($data) - 1)] = (ph()->Is->URL($value) === true) ? $value : ph()->URL(null, $value);
+			}
+
+			if (empty($type) === true)
+			{
+				$input = preg_grep('~[.](?:js|css)$~i', (array) $input);
+
+				foreach (array('js', 'css') as $value)
+				{
+					$type[$value] = count(preg_grep('~[.]' . $value . '$~i', $input));
+				}
+
+				$type = strtolower(array_search(max($type), $type));
+			}
+
+			if ((count($data) > 2) && (preg_match('~^(?:js|css)$~i', $type) > 0))
+			{
+				$result = parent::URL('http://reducisaurus.appspot.com/', '/' . $type, $data);
+
+				if ((isset($output) === true) && (($result = self::CURL($result)) !== false))
+				{
+					$result = ph()->Disk->File($output, $result, false, $chmod, $ttl);
+				}
+
+				return $result;
 			}
 		}
 
