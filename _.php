@@ -1282,8 +1282,18 @@ class phunction_Disk extends phunction
 		return (empty($result) !== true) ? preg_replace('~^(.+);.+$~', '$1', $result) : false;
 	}
 
-	public static function Path($path)
+	public static function Path($path, $mkdir = false, $chmod = null)
 	{
+		if (($mkdir === true) && (file_exists($path) !== true))
+		{
+			if (is_null($chmod) === true)
+			{
+				$chmod = (in_array(get_current_user(), explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) !== true) ? 755 : 777;
+			}
+
+			mkdir($path, octdec(intval($chmod)), true);
+		}
+
 		if (file_exists($path) === true)
 		{
 			return rtrim(str_replace('\\', '/', realpath($path)), '/') . (is_dir($path) ? '/' : '');
@@ -1336,7 +1346,7 @@ class phunction_Disk extends phunction
 	public static function Upload($input, $output, $mime = null, $magic = null, $chmod = null)
 	{
 		$result = array();
-		$output = self::Path($output);
+		$output = self::Path($output, true, $chmod);
 
 		if ((is_dir($output) === true) && (array_key_exists($input, $_FILES) === true))
 		{
