@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.4.29 (github.com/alixaxel/phunction/)
+* phunction 1.5.5 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -146,9 +146,7 @@ class phunction
 
 		if (isset($db[self::$id], $query) === true)
 		{
-			$hash = md5($query);
-
-			if (empty($result[self::$id][$hash]) === true)
+			if (empty($result[self::$id][$hash = md5($query)]) === true)
 			{
 				$result[self::$id][$hash] = $db[self::$id]->prepare($query);
 			}
@@ -438,7 +436,7 @@ class phunction
 		return false;
 	}
 
-	public static function Segment($key, $default = false)
+	public static function Segment($key = null, $default = false)
 	{
 		static $result = null;
 
@@ -447,7 +445,7 @@ class phunction
 			$result = array_values(array_filter(explode('/', substr(self::Value($_SERVER, 'PHP_SELF'), strlen(self::Value($_SERVER, 'SCRIPT_NAME')))), 'strlen'));
 		}
 
-		return self::Value($result, (is_int($key) === true) ? $key : (array_search($key, $result) + 1), $default);
+		return (isset($key) === true) ? self::Value($result, (is_int($key) === true) ? $key : (array_search($key, $result) + 1), $default) : $result;
 	}
 
 	public static function Sort($array, $natural = true, $reverse = false)
@@ -478,7 +476,7 @@ class phunction
 						$value = preg_replace('~([0-9]+)~e', "sprintf('%032d', '$1')", $value);
 					}
 
-					if (strpos($value = htmlentities($string, ENT_QUOTES, 'UTF-8'), '&') !== false)
+					if (strpos($value = htmlentities($value, ENT_QUOTES, 'UTF-8'), '&') !== false)
 					{
 						$value = html_entity_decode(preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1' . chr(255) . '$2', $value), ENT_QUOTES, 'UTF-8');
 					}
@@ -519,6 +517,8 @@ class phunction
 
 	public static function Text($single, $plural = null, $number = null, $domain = null, $path = null)
 	{
+		static $result = null;
+
 		if (extension_loaded('gettext') === true)
 		{
 			if (defined('LC_MESSAGES') === true)
@@ -529,6 +529,11 @@ class phunction
 			foreach (array('LANG', 'LANGUAGE', 'LC_ALL', 'LC_MESSAGES') as $value)
 			{
 				putenv(sprintf('%s=%s', $value, 'en_US'));
+			}
+
+			if (isset($domain) === true)
+			{
+				$result = $domain;
 			}
 
 			if ((isset($path) === true) && (is_dir($path) === true))
@@ -542,26 +547,13 @@ class phunction
 				}
 			}
 
-			if (isset($domain, $single) === true)
+			if (isset($result, $single) === true)
 			{
-				if (isset($plural, $number) === true)
-				{
-					return dngettext($domain, $single, $plural, $number);
-				}
-
-				return dgettext($domain, $single);
+				return (isset($plural, $number) === true) ? dngettext($result, $single, $plural, $number) : dgettext($result, $single);
 			}
 		}
 
-		else if (isset($plural, $number) === true)
-		{
-			if (abs($number) !== 1)
-			{
-				return $plural;
-			}
-		}
-
-		return $single;
+		return ((isset($plural, $number) === true) && (abs($number) !== 1)) ? $plural : $single;
 	}
 
 	public static function Throttle($ttl = 60, $exit = 60, $count = 1, $proxy = false)
@@ -1216,24 +1208,12 @@ class phunction_Disk extends phunction
 
 	public static function Map($path, $pattern = '*')
 	{
-		if (($path = self::Path($path)) !== false)
+		if (is_dir($path = self::Path($path)) === true)
 		{
-			if (is_dir($path) === true)
-			{
-				$result = glob($path . $pattern, GLOB_MARK | GLOB_BRACE | GLOB_NOSORT);
-
-				foreach ($result as $key => $value)
-				{
-					$result[$key] = str_replace('\\', '/', $value);
-				}
-
-				return parent::Sort($result, true, false);
-			}
-
-			return array($path);
+			return parent::Sort(str_replace('\\', '/', glob($path . $pattern, GLOB_MARK | GLOB_BRACE | GLOB_NOSORT)), true, false);
 		}
 
-		return false;
+		return (empty($path) !== true) ? array($path) : false;
 	}
 
 	public static function Mime($path, $magic = null)
@@ -1664,15 +1644,13 @@ class phunction_HTTP extends phunction
 				}
 			}
 
-			if (count($_SESSION[__METHOD__] = array_filter($_SESSION[__METHOD__], 'count')) > 1)
+			if ((count($_SESSION[__METHOD__] = array_filter($_SESSION[__METHOD__], 'count')) > 1) && (ksort($_SESSION[__METHOD__]) === true))
 			{
-				ksort($_SESSION[__METHOD__]);
+				return $_SESSION[__METHOD__];
 			}
-
-			return $_SESSION[__METHOD__];
 		}
 
-		return false;
+		return array();
 	}
 
 	public static function Code($code = 200, $string = null, $replace = true)
