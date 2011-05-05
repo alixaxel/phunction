@@ -999,11 +999,14 @@ class phunction_Disk extends phunction
 		{
 			if (is_null($chmod) === true)
 			{
-				$chmod = (is_file($path) === true) ? 644 : 755;
+				$chmod = (is_file($path) === true) ? 666 : 777;
 
-				if (in_array(get_current_user(), explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) === true)
+				if ((extension_loaded('posix') === true) && (($user = parent::Value(posix_getpwuid(posix_getuid()), 'name')) !== false))
 				{
-					$chmod += 22;
+					if (in_array($user, explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) !== true)
+					{
+						$chmod -= 22;
+					}
 				}
 			}
 
@@ -1288,7 +1291,15 @@ class phunction_Disk extends phunction
 		{
 			if (is_null($chmod) === true)
 			{
-				$chmod = (in_array(get_current_user(), explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) !== true) ? 755 : 777;
+				$chmod = 777;
+
+				if ((extension_loaded('posix') === true) && (($user = parent::Value(posix_getpwuid(posix_getuid()), 'name')) !== false))
+				{
+					if (in_array($user, explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) !== true)
+					{
+						$chmod -= 22;
+					}
+				}
 			}
 
 			mkdir($path, octdec(intval($chmod)), true);
