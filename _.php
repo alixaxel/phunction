@@ -739,9 +739,7 @@ class phunction_Date extends phunction
 
 	public static function Birthday($date = 'now')
 	{
-		$date = parent::Date('U', $date, sprintf('+%u years', self::Age($date)));
-
-		if ($date !== false)
+		if (($date = parent::Date('U', $date, sprintf('+%u years', self::Age($date)))) !== false)
 		{
 			if (($date -= parent::Date('U', 'today')) < 0)
 			{
@@ -756,12 +754,10 @@ class phunction_Date extends phunction
 
 	public static function Calendar($date = 'now', $events = null)
 	{
-		$date = parent::Date('Ym01', $date);
+		$result = array();
 
-		if ($date !== false)
+		if (($date = parent::Date('Ym01', $date)) !== false)
 		{
-			$result = array();
-
 			if (empty($result) === true)
 			{
 				$date = parent::Date('Ymd', $date, 'this week', '-1 day');
@@ -774,20 +770,16 @@ class phunction_Date extends phunction
 					$result[parent::Date('W', $date)][parent::Date('DATE', $date)] = parent::Value($events, parent::Date('DATE', $date), null);
 				}
 			}
-
-			return $result;
 		}
 
-		return false;
+		return $result;
 	}
 
 	public static function Frequency($date = 'now')
 	{
 		if (($date = parent::Date('U', $date)) !== false)
 		{
-			$date = abs($_SERVER['REQUEST_TIME'] - $date);
-
-			if ($date !== 0)
+			if (($date = abs($_SERVER['REQUEST_TIME'] - $date)) != 0)
 			{
 				$frequency = array
 				(
@@ -818,9 +810,7 @@ class phunction_Date extends phunction
 	{
 		if (($date = parent::Date('U', $date)) !== false)
 		{
-			$date = $_SERVER['REQUEST_TIME'] - $date;
-
-			if ($date !== 0)
+			if (($date = $_SERVER['REQUEST_TIME'] - $date) != 0)
 			{
 				$units = array
 				(
@@ -835,9 +825,9 @@ class phunction_Date extends phunction
 
 				foreach ($units as $key => $value)
 				{
-					if (($result = floor(abs($date) / $key)) >= 1)
+					if (($result = intval(abs($date) / $key)) >= 1)
 					{
-						return sprintf('%u %s%s %s', $result, $value, ($result == 1) ? '' : 's', ($date >= 1) ? 'ago' : 'from now');
+						return str_replace(' ago', ($date >= 1) ? ' ago' : ' from now', array('%u ' . $value . ' ago', '%u ' . $value . 's ago', $result));
 					}
 				}
 			}
@@ -850,9 +840,7 @@ class phunction_Date extends phunction
 
 	public static function Zodiac($date = 'now')
 	{
-		$date = parent::Date('md', $date);
-
-		if ($date !== false)
+		if (($date = parent::Date('md', $date)) !== false)
 		{
 			$zodiac = array
 			(
@@ -1977,7 +1965,7 @@ class phunction_Math extends phunction
 				{
 					$result = $charset[$number % $output];
 
-					while (($number = floor($number / $output)) > 0)
+					while (($number = intval($number / $output)) > 0)
 					{
 						$result = $charset[$number % $output] . $result;
 					}
