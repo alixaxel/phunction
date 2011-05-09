@@ -1645,6 +1645,32 @@ class phunction_HTTP extends phunction
 	{
 	}
 
+	function Accept($key = null, $type = null, $match = null, $default = false)
+	{
+		$result = array();
+		$header = parent::Value($_SERVER, rtrim('HTTP_ACCEPT_' . strtoupper($type), '_'));
+
+		if (count($header = array_filter(array_map('trim', explode(',', $header)), 'strlen')) > 0)
+		{
+			foreach ($header as $accept)
+			{
+				if (count($accept = array_filter(array_map('trim', explode(';', $accept)), 'strlen')) > 0)
+				{
+					$result[parent::Value($accept, 0)] = floatval(str_replace('q=', '', parent::Value($accept, 1, 1)));
+				}
+			}
+
+			if (strlen($match = implode('|', (array) $match)) > 0)
+			{
+				$result = array_intersect_key($result, array_flip(preg_grep('~' . $match . '|^[*](?:/[*])?$~i', array_keys($result))));
+			}
+
+			arsort($result, SORT_NUMERIC);
+		}
+
+		return (is_int($key) === true) ? parent::Value(array_keys($result), $key, $default) : $result;
+	}
+
 	public static function Cart($id = null, $sku = null, $name = null, $price = null, $quantity = null, $attributes = null)
 	{
 		if (strlen(session_id()) > 0)
