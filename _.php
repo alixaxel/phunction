@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.5.5 (github.com/alixaxel/phunction/)
+* phunction 1.5.9 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -638,7 +638,7 @@ class phunction
 							$url['query'] = ltrim(rtrim(self::Value($url, 'query'), '&') . '&' . preg_replace('~^.*?[?&]([^#]*).*$~', '$1', $path), '&');
 						}
 
-						$url['path'] = '/' . ltrim(preg_replace('~^(.*?)[?&#].*$~', '$1', $path), '/');
+						$url['path'] = '/' . ltrim(preg_replace('~[?&#].*$~', '', $path), '/');
 					}
 
 					while (preg_match('~/[.][.]?(?:/|$)~', $url['path']) > 0)
@@ -729,9 +729,7 @@ class phunction_Date extends phunction
 
 	public static function Age($date = 'now')
 	{
-		$date = parent::Date('Ymd', $date);
-
-		if ($date !== false)
+		if (($date = parent::Date('Ymd', $date)) !== false)
 		{
 			return intval(substr(parent::Date('Ymd') - $date, 0, -4));
 		}
@@ -745,9 +743,7 @@ class phunction_Date extends phunction
 
 		if ($date !== false)
 		{
-			$date -= parent::Date('U', 'today');
-
-			if ($date < 0)
+			if (($date -= parent::Date('U', 'today')) < 0)
 			{
 				$date = parent::Date('U', '@' . $date, '+1 year');
 			}
@@ -773,9 +769,7 @@ class phunction_Date extends phunction
 
 			while (count($result, COUNT_RECURSIVE) < 48)
 			{
-				$date = parent::Date('DATE', $date, '+1 day');
-
-				if ($date !== false)
+				if (($date = parent::Date('DATE', $date, '+1 day')) !== false)
 				{
 					$result[parent::Date('W', $date)][parent::Date('DATE', $date)] = parent::Value($events, parent::Date('DATE', $date), null);
 				}
@@ -789,9 +783,7 @@ class phunction_Date extends phunction
 
 	public static function Frequency($date = 'now')
 	{
-		$date = parent::Date('U', $date);
-
-		if ($date !== false)
+		if (($date = parent::Date('U', $date)) !== false)
 		{
 			$date = abs($_SERVER['REQUEST_TIME'] - $date);
 
@@ -824,9 +816,7 @@ class phunction_Date extends phunction
 
 	public static function Relative($date = 'now')
 	{
-		$date = parent::Date('U', $date);
-
-		if ($date !== false)
+		if (($date = parent::Date('U', $date)) !== false)
 		{
 			$date = $_SERVER['REQUEST_TIME'] - $date;
 
@@ -845,9 +835,7 @@ class phunction_Date extends phunction
 
 				foreach ($units as $key => $value)
 				{
-					$result = floor(abs($date) / $key);
-
-					if ($result >= 1)
+					if (($result = floor(abs($date) / $key)) >= 1)
 					{
 						return sprintf('%u %s%s %s', $result, $value, ($result == 1) ? '' : 's', ($date >= 1) ? 'ago' : 'from now');
 					}
@@ -1003,10 +991,7 @@ class phunction_Disk extends phunction
 
 				if ((extension_loaded('posix') === true) && (($user = parent::Value(posix_getpwuid(posix_getuid()), 'name')) !== false))
 				{
-					if (in_array($user, explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) !== true)
-					{
-						$chmod -= 22;
-					}
+					$chmod -= (in_array($user, explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) === true) ? 0 : 22;
 				}
 			}
 
@@ -1295,10 +1280,7 @@ class phunction_Disk extends phunction
 
 				if ((extension_loaded('posix') === true) && (($user = parent::Value(posix_getpwuid(posix_getuid()), 'name')) !== false))
 				{
-					if (in_array($user, explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) !== true)
-					{
-						$chmod -= 22;
-					}
+					$chmod -= (in_array($user, explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) === true) ? 0 : 22;
 				}
 			}
 
@@ -2410,7 +2392,7 @@ class phunction_Net extends phunction
 
 		if ($result === false)
 		{
-			$countries = self::CURL('http://www.geonames.org/countryInfoJSON?lang=' . urlencode($language));
+			$countries = self::CURL('http://www.geonames.org/countryInfoJSON', array('lang' => $language));
 
 			if ($countries !== false)
 			{
@@ -2438,16 +2420,15 @@ class phunction_Net extends phunction
 		return $result;
 	}
 
-	public static function CURL($url, $data = null, $method = 'GET', $options = null)
+	public static function CURL($url, $data = null, $method = 'GET', $cookie = null, $options = null)
 	{
 		$result = false;
 
-		if ((extension_loaded('curl') === true) && (ph()->Is->URL($url) === true))
+		if ((extension_loaded('curl') === true) && (is_resource($curl = curl_init()) === true))
 		{
-			$curl = curl_init($url);
-
-			if (is_resource($curl) === true)
+			if (($url = parent::URL($url, null, (preg_match('~^(?:POST|PUT)$~i', $method) > 0) ? null : $data)) !== false)
 			{
+				curl_setopt($curl, CURLOPT_URL, $url);
 				curl_setopt($curl, CURLOPT_FAILONERROR, true);
 				curl_setopt($curl, CURLOPT_AUTOREFERER, true);
 				curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
@@ -2455,63 +2436,50 @@ class phunction_Net extends phunction
 				curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
 				curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
 
-				if (preg_match('~^(?:GET|HEAD)$~i', $method) > 0)
+				if (preg_match('~^(?:DELETE|GET|HEAD|OPTIONS|POST|PUT)$~i', $method) > 0)
 				{
-					curl_setopt($curl, CURLOPT_HTTPGET, true);
-
-					if (preg_match('~^(?:HEAD)$~i', $method) > 0)
+					if (preg_match('~^(?:HEAD|OPTIONS)$~i', $method) > 0)
 					{
-						curl_setopt($curl, CURLOPT_NOBODY, true);
-						curl_setopt($curl, CURLOPT_HEADER, true);
-					}
-				}
-
-				else if (preg_match('~^(?:POST)$~i', $method) > 0)
-				{
-					curl_setopt($curl, CURLOPT_POST, true);
-
-					if ((is_array($data) === true) && (preg_match('~"[^"]+":"@[^"]+"~', json_encode($data)) === 0))
-					{
-						$data = http_build_query($data, '', '&');
+						curl_setopt_array($curl, array(CURLOPT_HEADER => true, CURLOPT_NOBODY => true));
 					}
 
-					curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-				}
+					else if (preg_match('~^(?:POST|PUT)$~i', $method) > 0)
+					{
+						if ((is_array($data) === true) && ((count($data) < count($data, COUNT_RECURSIVE)) || (count(preg_grep('~^@~', $data)) == 0)))
+						{
+							$data = http_build_query($data, '', '&');
+						}
 
-				else if (preg_match('~^(?:PUT|DELETE)$~i', $method) > 0)
-				{
+						curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+					}
+
 					curl_setopt($curl, CURLOPT_CUSTOMREQUEST, strtoupper($method));
 
-					if (preg_match('~^(?:PUT)$~i', $method) > 0)
+					if (isset($cookie) === true)
 					{
-						curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
-					}
-				}
-
-				if (array_key_exists('HTTP_USER_AGENT', $_SERVER) === true)
-				{
-					curl_setopt($curl, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
-				}
-
-				if (is_array($options) === true)
-				{
-					curl_setopt_array($curl, $options);
-				}
-
-				for ($i = 1; $i <= 5; ++$i)
-				{
-					$result = curl_exec($curl);
-
-					if (($i == 5) || ($result !== false))
-					{
-						break;
+						curl_setopt_array($curl, array(CURLOPT_COOKIEJAR => $cookie, CURLOPT_COOKIEFILE => $cookie));
 					}
 
-					usleep(pow(2, $i - 2) * 1000000);
-				}
+					if (is_array($options) === true)
+					{
+						curl_setopt_array($curl, $options);
+					}
 
-				curl_close($curl);
+					for ($i = 1; $i <= 5; ++$i)
+					{
+						$result = curl_exec($curl);
+
+						if (($i == 5) || ($result !== false))
+						{
+							break;
+						}
+
+						usleep(pow(2, $i - 2) * 1000000);
+					}
+				}
 			}
+
+			curl_close($curl);
 		}
 
 		return $result;
@@ -2780,7 +2748,7 @@ class phunction_Net extends phunction
 			'sensor' => 'false',
 		);
 
-		if (($result = self::CURL(parent::URL('http://maps.googleapis.com/', '/maps/api/geocode/json', $data))) !== false)
+		if (($result = self::CURL('http://maps.googleapis.com/maps/api/geocode/json', $data)) !== false)
 		{
 			return parent::Value(json_decode($result, true), array('results', 0, 'geometry', 'location'));
 		}
@@ -3077,7 +3045,7 @@ class phunction_Net extends phunction
 			'langpair' => sprintf('%s|%s', $input, $output),
 		);
 
-		if (($result = self::CURL(parent::URL('http://ajax.googleapis.com/', '/ajax/services/language/translate', $data))) !== false)
+		if (($result = self::CURL('http://ajax.googleapis.com/ajax/services/language/translate', $data)) !== false)
 		{
 			return parent::Value(json_decode($result, true), array('responseData', 'translatedText'));
 		}
@@ -3102,7 +3070,7 @@ class phunction_Net extends phunction
 
 	public static function Weather($query)
 	{
-		$weather = self::XML(self::CURL('http://www.google.com/ig/api?weather=' . urlencode($query)));
+		$weather = self::XML(self::CURL('http://www.google.com/ig/api', array('weather' => $query)));
 
 		if ($weather !== false)
 		{
@@ -3254,14 +3222,22 @@ class phunction_Text extends phunction
 
 	public static function Filter($string, $control = true)
 	{
-		$string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
+		if (is_array($string) === true)
+		{
+			foreach ($string as $key => $value)
+			{
+				$string[$key] = self::Filter($value, $control);
+			}
+
+			return $string;
+		}
 
 		if ($control === true)
 		{
-			return preg_replace('~\p{C}+~u', '', $string);
+			return preg_replace('~\p{C}+~u', '', iconv('UTF-8', 'UTF-8//IGNORE', $string));
 		}
 
-		return preg_replace(array('~\r[\n]?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $string);
+		return preg_replace(array('~\r[\n]?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), iconv('UTF-8', 'UTF-8//IGNORE', $string));
 	}
 
 	public static function GUID()
