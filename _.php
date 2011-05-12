@@ -42,12 +42,20 @@ class phunction
 			set_magic_quotes_runtime(false);
 		}
 
-		foreach (array('_GET', '_POST', '_COOKIE', '_REQUEST') as $global)
+		foreach (array('_GET', '_PUT', '_POST', '_COOKIE', '_REQUEST') as $global)
 		{
+			$GLOBALS[$global] = self::Value($GLOBALS, $global, null);
+
+			if ((strcmp('_PUT', $global) === 0) && (strcasecmp('PUT', self::Value($_SERVER, 'REQUEST_METHOD')) === 0))
+			{
+				if ((($GLOBALS[$global] = file_get_contents('php://input')) !== false) && (preg_match('~/x-www-form-urlencoded$~', self::Value($_SERVER, 'CONTENT_TYPE')) > 0))
+				{
+					parse_str($GLOBALS[$global], $GLOBALS[$global]);
+				}
+			}
+
 			$GLOBALS[$global] = self::Filter(self::Voodoo($GLOBALS[$global]), false);
 		}
-
-		$GLOBALS['_PUT'] = (strcasecmp('PUT', self::Value($_SERVER, 'REQUEST_METHOD')) === 0) ? file_get_contents('php://input') : null;
 	}
 
 	public function __get($key)
@@ -270,20 +278,29 @@ class phunction
 	{
 		if (is_array($data) === true)
 		{
+			$result = array();
+
 			foreach ($data as $key => $value)
 			{
-				$data[$key] = self::Filter($value, $control);
+				$result[self::Filter($key, $control)] = self::Filter($value, $control);
 			}
 
-			return $data;
+			return $result;
 		}
 
-		if ($control === true)
+		else if (is_string($data) === true)
 		{
-			return preg_replace('~\p{C}+~u', '', @iconv('UTF-8', 'UTF-8//IGNORE', $data));
+			$data = @iconv('UTF-8', 'UTF-8//IGNORE', $data);
+
+			if ($control === true)
+			{
+				return preg_replace('~\p{C}+~u', '', $data);
+			}
+
+			return preg_replace(array('~\r[\n]?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $data);
 		}
 
-		return preg_replace(array('~\r[\n]?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), @iconv('UTF-8', 'UTF-8//IGNORE', $data));
+		return $data;
 	}
 
 	public static function Flatten($data, $key = null, $default = false)
@@ -747,7 +764,7 @@ class phunction
 
 				foreach ($data as $key => $value)
 				{
-					$result[stripslashes($key)] = self::Voodoo($value);
+					$result[self::Voodoo($key)] = self::Voodoo($value);
 				}
 
 				return $result;
