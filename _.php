@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.5.9 (github.com/alixaxel/phunction/)
+* phunction 1.5.12 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -42,12 +42,9 @@ class phunction
 			set_magic_quotes_runtime(false);
 		}
 
-		else if ((version_compare(PHP_VERSION, '6.0.0', '<') === true) && (get_magic_quotes_gpc() === 1))
+		foreach (array('_GET', '_POST', '_COOKIE', '_REQUEST') as $global)
 		{
-			$_GET = json_decode(stripslashes(preg_replace('~\\\(?:0|a|b|f|n|r|t|v)~', '\\\$0', json_encode($_GET, JSON_HEX_APOS | JSON_HEX_QUOT))), true);
-			$_POST = json_decode(stripslashes(preg_replace('~\\\(?:0|a|b|f|n|r|t|v)~', '\\\$0', json_encode($_POST, JSON_HEX_APOS | JSON_HEX_QUOT))), true);
-			$_COOKIE = json_decode(stripslashes(preg_replace('~\\\(?:0|a|b|f|n|r|t|v)~', '\\\$0', json_encode($_COOKIE, JSON_HEX_APOS | JSON_HEX_QUOT))), true);
-			$_REQUEST = json_decode(stripslashes(preg_replace('~\\\(?:0|a|b|f|n|r|t|v)~', '\\\$0', json_encode($_REQUEST, JSON_HEX_APOS | JSON_HEX_QUOT))), true);
+			$GLOBALS[$global] = self::Filter(self::Voodoo($GLOBALS[$global]), false);
 		}
 
 		$GLOBALS['_PUT'] = (strcasecmp('PUT', self::Value($_SERVER, 'REQUEST_METHOD')) === 0) ? file_get_contents('php://input') : null;
@@ -267,6 +264,26 @@ class phunction
 		}
 
 		return $result;
+	}
+
+	public static function Filter($data, $control = true)
+	{
+		if (is_array($data) === true)
+		{
+			foreach ($data as $key => $value)
+			{
+				$data[$key] = self::Filter($value, $control);
+			}
+
+			return $data;
+		}
+
+		if ($control === true)
+		{
+			return preg_replace('~\p{C}+~u', '', @iconv('UTF-8', 'UTF-8//IGNORE', $data));
+		}
+
+		return preg_replace(array('~\r[\n]?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), @iconv('UTF-8', 'UTF-8//IGNORE', $data));
 	}
 
 	public static function Flatten($data, $key = null, $default = false)
@@ -658,7 +675,7 @@ class phunction
 						$url['query'] = array_merge($url['query'], $query);
 					}
 
-					if ((count($url['query'] = array_filter($url['query'], 'count')) > 0) && (ksort($url['query']) === true))
+					if ((count($url['query'] = self::Voodoo(array_filter($url['query'], 'count'))) > 0) && (ksort($url['query']) === true))
 					{
 						$result .= rtrim('?' . http_build_query($url['query'], '', '&'), '?');
 					}
@@ -718,6 +735,28 @@ class phunction
 
 			require($path . '.php');
 		}
+	}
+
+	public static function Voodoo($data)
+	{
+		if ((version_compare(PHP_VERSION, '6.0.0', '<') === true) && (get_magic_quotes_gpc() === 1))
+		{
+			if (is_array($data) === true)
+			{
+				$result = array();
+
+				foreach ($data as $key => $value)
+				{
+					$result[stripslashes($key)] = self::Voodoo($value);
+				}
+
+				return $result;
+			}
+
+			return (is_string($data) === true) ? stripslashes($data) : $data;
+		}
+
+		return $data;
 	}
 }
 
@@ -1656,7 +1695,7 @@ class phunction_HTTP extends phunction
 			arsort($result, SORT_NUMERIC);
 		}
 
-		return (is_int($key) === true) ? parent::Value(array_keys($result), $key, $default) : $result;
+		return (isset($key) === true) ? parent::Value(array_keys($result), intval($key), $default) : $result;
 	}
 
 	public static function Cart($id = null, $sku = null, $name = null, $price = null, $quantity = null, $attributes = null)
@@ -2981,7 +3020,7 @@ class phunction_Net extends phunction
 
 				if (preg_match('~[^\x20-\x7E]~', $message) > 0)
 				{
-					$message = ph()->Text->Filter($message);
+					$message = parent::Filter($message);
 
 					if ($unicode === true)
 					{
@@ -3232,26 +3271,6 @@ class phunction_Text extends phunction
 	public static function Entropy($string)
 	{
 		return strlen(count_chars($string, 3)) * 100 / 256;
-	}
-
-	public static function Filter($string, $control = true)
-	{
-		if (is_array($string) === true)
-		{
-			foreach ($string as $key => $value)
-			{
-				$string[$key] = self::Filter($value, $control);
-			}
-
-			return $string;
-		}
-
-		if ($control === true)
-		{
-			return preg_replace('~\p{C}+~u', '', iconv('UTF-8', 'UTF-8//IGNORE', $string));
-		}
-
-		return preg_replace(array('~\r[\n]?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), iconv('UTF-8', 'UTF-8//IGNORE', $string));
 	}
 
 	public static function GUID()
