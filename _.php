@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.5.12 (github.com/alixaxel/phunction/)
+* phunction 1.5.15 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -739,12 +739,7 @@ class phunction
 
 				if ((($result = ob_get_clean()) !== false) && (ob_start() === true))
 				{
-					if ($minify === true)
-					{
-						$result = preg_replace('~^\t+~m', '', $result);
-					}
-
-					echo $result;
+					echo ($minify === true) ? preg_replace('~^[[:blank:]]+~m', '', $result) : $result;
 				}
 
 				return ($return === true) ? ob_get_clean() : ob_end_flush();
@@ -1297,7 +1292,7 @@ class phunction_Disk extends phunction
 				}
 			}
 
-			if ($result === false)
+			if (empty($result) === true)
 			{
 				if (function_exists('mime_content_type') === true)
 				{
@@ -2038,7 +2033,7 @@ class phunction_Math extends phunction
 		return false;
 	}
 
-	public static function Benchmark($callback, $arguments = null, $iterations = 10000)
+	public static function Benchmark($callback, $arguments = null, $iterations = 1000)
 	{
 		if (is_callable($callback) === true)
 		{
@@ -2527,7 +2522,7 @@ class phunction_Net extends phunction
 
 					if (isset($cookie) === true)
 					{
-						curl_setopt_array($curl, array(CURLOPT_COOKIEJAR => $cookie, CURLOPT_COOKIEFILE => $cookie));
+						curl_setopt_array($curl, array_fill_keys(array(CURLOPT_COOKIEJAR, CURLOPT_COOKIEFILE), $cookie));
 					}
 
 					if (is_array($options) === true)
@@ -3083,6 +3078,31 @@ class phunction_Net extends phunction
 		return false;
 	}
 
+	public static function Smush($input, $output = null, $chmod = null)
+	{
+		if (isset($input) === true)
+		{
+			$data = array('img' => $input);
+
+			if ((is_file($input) === true) && (filesize($input) <= 1048576))
+			{
+				$data = array('files' => '@' . ph()->Disk->Path($input));
+			}
+
+			if (($result = self::CURL('http://www.smushit.com/ws.php', $data, 'POST')) !== false)
+			{
+				if ((($result = parent::Value(json_decode($result, true), 'dest')) !== false) && (isset($output) === true))
+				{
+					$result = ph()->Disk->File($output, self::CURL($result), false, $chmod);
+				}
+
+				return $result;
+			}
+		}
+
+		return false;
+	}
+
 	public static function Socket($host, $port, $timeout = 3)
 	{
 		$time = microtime(true);
@@ -3445,12 +3465,7 @@ class phunction_Text extends phunction
 	{
 		if ((($result = ob_get_clean()) !== false) && (ob_start() === true))
 		{
-			if ($encode === true)
-			{
-				$string = addcslashes($string, '\\$');
-			}
-
-			echo preg_replace('~<title>([^<]*)</title>~i', '<title>' . $string . '</title>', $result, 1);
+			echo preg_replace('~<title>([^<]*)</title>~i', '<title>' . (($encode === true) ? addcslashes($string, '\\$') : $string) . '</title>', $result, 1);
 		}
 
 		return false;
