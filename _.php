@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.5.15 (github.com/alixaxel/phunction/)
+* phunction 1.5.23 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -252,10 +252,10 @@ class phunction
 
 			foreach ($data as $key => $value)
 			{
-				$result .= self::Export($name . '[' . var_export($key, true) . ']', $value);
+				$result .= self::Export($name . '[' . var_export($key, true) . ']', $value) . "\n";
 			}
 
-			if (array_keys($data) === array_keys(array_keys($data)))
+			if (array_keys($data) === range(0, count($data)))
 			{
 				$result = preg_replace('~^' . sprintf(preg_quote($name . '[%s]', '~'), '\d+') . '~m', $name . '[]', $result);
 			}
@@ -271,7 +271,7 @@ class phunction
 			$result .= sprintf("%s = %s;\n", $name, 'null');
 		}
 
-		return $result;
+		return rtrim($result, "\n");
 	}
 
 	public static function Filter($data, $control = true)
@@ -2510,7 +2510,7 @@ class phunction_Net extends phunction
 
 					else if (preg_match('~^(?:POST|PUT)$~i', $method) > 0)
 					{
-						if ((is_array($data) === true) && ((count($data) < count($data, COUNT_RECURSIVE)) || (count(preg_grep('~^@~', $data)) == 0)))
+						if ((is_array($data) === true) && ((count($data) != count($data, COUNT_RECURSIVE)) || (count(preg_grep('~^@~', $data)) == 0)))
 						{
 							$data = http_build_query($data, '', '&');
 						}
@@ -3270,21 +3270,16 @@ class phunction_Text extends phunction
 		if (extension_loaded('mcrypt') === true)
 		{
 			$key = md5($key);
-			$result = self::Regex($string, '^([0-9a-zA-Z/+]*={0,2})[0-9a-f]{40}$', array(1, 0));
+			$result = preg_replace('~[0-9a-f]{40}$~', '', $string);
 
-			if (strcmp(sha1($result . $key), self::Regex($string, '^[0-9a-zA-Z/+]*={0,2}([0-9a-f]{40})$', array(1, 0))) === 0)
+			if (strcmp(sha1($result . $key), preg_replace('~^[0-9a-zA-Z/+]*={0,2}([0-9a-f]{40})$~', '$1', $string)) === 0)
 			{
 				$result = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $key, base64_decode($result), MCRYPT_MODE_CBC, md5($key)), "\0");
 			}
 
-			else
+			else if (preg_match('~^[a-zA-Z0-9/+]*={0,2}$~', $result = base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $key, $string, MCRYPT_MODE_CBC, md5($key)))) > 0)
 			{
-				$result = base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $key, $string, MCRYPT_MODE_CBC, md5($key)));
-
-				if (self::Regex($result, '^[a-zA-Z0-9/+]*={0,2}$') === true)
-				{
-					$result .= sha1($result . $key);
-				}
+				$result .= sha1($result . $key);
 			}
 
 			return $result;
@@ -3493,7 +3488,19 @@ class phunction_Text extends phunction
 
 	public static function XSS($string)
 	{
-		return htmlspecialchars($string, ENT_QUOTES);
+		if (is_array($string) === true)
+		{
+			$result = array();
+
+			foreach ($string as $key => $value)
+			{
+				$result[self::Voodoo($key)] = self::Voodoo($value);
+			}
+
+			return $result;
+		}
+
+		return (is_string($string) === true) ? htmlspecialchars($string, ENT_QUOTES) : $string;
 	}
 }
 
