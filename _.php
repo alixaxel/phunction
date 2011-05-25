@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.5.23 (github.com/alixaxel/phunction/)
+* phunction 1.5.25 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -2485,7 +2485,7 @@ class phunction_Net extends phunction
 		return $result;
 	}
 
-	public static function CURL($url, $data = null, $method = 'GET', $cookie = null, $options = null)
+	public static function CURL($url, $data = null, $method = 'GET', $cookie = null, $options = null, $retries = 3)
 	{
 		$result = false;
 
@@ -2522,7 +2522,7 @@ class phunction_Net extends phunction
 
 					if (isset($cookie) === true)
 					{
-						curl_setopt_array($curl, array_fill_keys(array(CURLOPT_COOKIEJAR, CURLOPT_COOKIEFILE), $cookie));
+						curl_setopt_array($curl, array_fill_keys(array(CURLOPT_COOKIEJAR, CURLOPT_COOKIEFILE), strval($cookie)));
 					}
 
 					if (is_array($options) === true)
@@ -2530,11 +2530,11 @@ class phunction_Net extends phunction
 						curl_setopt_array($curl, $options);
 					}
 
-					for ($i = 1; $i <= 5; ++$i)
+					for ($i = 1; $i <= $retries; ++$i)
 					{
 						$result = curl_exec($curl);
 
-						if (($i == 5) || ($result !== false))
+						if (($i == $retries) || ($result !== false))
 						{
 							break;
 						}
@@ -3494,7 +3494,7 @@ class phunction_Text extends phunction
 
 			foreach ($string as $key => $value)
 			{
-				$result[self::Voodoo($key)] = self::Voodoo($value);
+				$result[self::XSS($key)] = self::XSS($value);
 			}
 
 			return $result;
