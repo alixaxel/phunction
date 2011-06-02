@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.5.25 (github.com/alixaxel/phunction/)
+* phunction 1.6.2 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -357,34 +357,6 @@ class phunction
 		return false;
 	}
 
-	public static function Input($input, $filters = null, $callbacks = null, $required = true)
-	{
-		if (array_key_exists($input, $_REQUEST) === true)
-		{
-			$result = array_map('trim', (array) $_REQUEST[$input]);
-
-			if (($required === true) || (count($result) > 0))
-			{
-				foreach (array_filter(explode('|', $filters), 'is_callable') as $filter)
-				{
-					if (in_array(false, array_map($filter, $result)) === true)
-					{
-						return false;
-					}
-				}
-			}
-
-			foreach (array_filter(explode('|', $callbacks), 'is_callable') as $callback)
-			{
-				$result = array_map($callback, $result);
-			}
-
-			return (is_array($_REQUEST[$input]) === true) ? $result : $result[0];
-		}
-
-		return ($required === true) ? false : null;
-	}
-
 	public static function Mongo($query = null)
 	{
 		static $db = array();
@@ -459,6 +431,34 @@ class phunction
 
 			exit();
 		}
+	}
+
+	public static function Request($input, $filters = null, $callbacks = null, $required = true)
+	{
+		if (array_key_exists($input, $_REQUEST) === true)
+		{
+			$result = array_map('trim', (array) $_REQUEST[$input]);
+
+			if (($required === true) || (count($result) > 0))
+			{
+				foreach (array_filter(explode('|', $filters), 'is_callable') as $filter)
+				{
+					if (in_array(false, array_map($filter, $result)) === true)
+					{
+						return false;
+					}
+				}
+			}
+
+			foreach (array_filter(explode('|', $callbacks), 'is_callable') as $callback)
+			{
+				$result = array_map($callback, $result);
+			}
+
+			return (is_array($_REQUEST[$input]) === true) ? $result : $result[0];
+		}
+
+		return ($required === true) ? false : null;
 	}
 
 	public static function Route($route, $object = null, $callback = null, $method = null, $throttle = null)
@@ -1026,7 +1026,7 @@ class phunction_Disk extends phunction
 		{
 			if (is_null($chmod) === true)
 			{
-				$chmod = (is_file($path) === true) ? 666 : 777;
+				$chmod = (is_dir($path) === true) ? 777 : 666;
 
 				if ((extension_loaded('posix') === true) && (($user = parent::Value(posix_getpwuid(posix_getuid()), 'name')) !== false))
 				{
@@ -1040,11 +1040,47 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
+	public static function Delete($path)
+	{
+		if (is_writable($path) === true)
+		{
+			if (is_dir($path) === true)
+			{
+				$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path), RecursiveIteratorIterator::CHILD_FIRST);
+
+				foreach ($files as $file)
+				{
+					if (in_array($file->getBasename(), array('.', '..')) !== true)
+					{
+						if ($file->isDir() === true)
+						{
+							rmdir($file->getPathName());
+						}
+
+						else if (($file->isFile() === true) || ($file->isLink() === true))
+						{
+							unlink($file->getPathname());
+						}
+					}
+				}
+
+				return rmdir($path);
+			}
+
+			else if ((is_file($path) === true) || (is_link($path) === true))
+			{
+				return unlink($path);
+			}
+		}
+
+		return false;
+	}
+
 	public static function Download($path, $speed = null, $multipart = false)
 	{
 		if (strncmp('cli', PHP_SAPI, 3) !== 0)
 		{
-			if (is_file($path) === true)
+			if (is_file($path = self::Path($path)) === true)
 			{
 				while (ob_get_level() > 0)
 				{
@@ -1350,14 +1386,14 @@ class phunction_Disk extends phunction
 					$result += ($recursive === true) ? self::Size($path . $file, null, $recursive) : 0;
 				}
 
-				else if (is_file($path . $file) === true)
+				else if ((is_file($path . $file) === true) || (is_link($path . $file) === true))
 				{
 					$result += sprintf('%u', filesize($path . $file));
 				}
 			}
 		}
 
-		else if (is_file($path) === true)
+		else if ((is_file($path) === true) || (is_link($path) === true))
 		{
 			$result += sprintf('%u', filesize($path));
 		}
@@ -1900,41 +1936,41 @@ class phunction_Is extends phunction
 	{
 	}
 
-	public static function ASCII($value)
+	public static function ASCII($string = null)
 	{
-		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[\x20-\x7E]*$~'))) !== false) ? true : false;
+		return (filter_var($string, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[\x20-\x7E]*$~'))) !== false) ? true : false;
 	}
 
-	public static function Alpha($value)
+	public static function Alpha($string = null)
 	{
-		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[a-z]*$~i'))) !== false) ? true : false;
+		return (filter_var($string, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[a-z]*$~i'))) !== false) ? true : false;
 	}
 
-	public static function Alphanum($value)
+	public static function Alphanum($string = null)
 	{
-		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[0-9a-z]*$~i'))) !== false) ? true : false;
+		return (filter_var($string, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[0-9a-z]*$~i'))) !== false) ? true : false;
 	}
 
-	public static function Email($value, $mx = false)
+	public static function Email($email = null, $mx = false)
 	{
-		if (filter_var($value, FILTER_VALIDATE_EMAIL) !== false)
+		if (filter_var($email, FILTER_VALIDATE_EMAIL) !== false)
 		{
-			return (($mx === true) && (function_exists('checkdnsrr') === true)) ? checkdnsrr(ltrim(strrchr($value, '@'), '@'), 'MX') : true;
+			return (($mx === true) && (function_exists('checkdnsrr') === true)) ? checkdnsrr(ltrim(strrchr($email, '@'), '@'), 'MX') : true;
 		}
 
 		return false;
 	}
 
-	public static function Float($value, $minimum = null, $maximum = null)
+	public static function Float($number = null, $minimum = null, $maximum = null)
 	{
-		if (filter_var($value, FILTER_VALIDATE_FLOAT) !== false)
+		if (filter_var($number, FILTER_VALIDATE_FLOAT) !== false)
 		{
-			if ((isset($minimum) === true) && ($value < $minimum))
+			if ((isset($minimum) === true) && ($number < $minimum))
 			{
 				return false;
 			}
 
-			if ((isset($maximum) === true) && ($value > $maximum))
+			if ((isset($maximum) === true) && ($number > $maximum))
 			{
 				return false;
 			}
@@ -1945,27 +1981,37 @@ class phunction_Is extends phunction
 		return false;
 	}
 
-	public static function Integer($value, $minimum = null, $maximum = null)
+	public static function Integer($number = null, $minimum = null, $maximum = null)
 	{
-		return (filter_var($value, FILTER_VALIDATE_INT) !== false) ? self::Float($value, $minimum, $maximum) : false;
+		return (filter_var($number, FILTER_VALIDATE_INT) !== false) ? self::Float($number, $minimum, $maximum) : false;
 	}
 
-	public static function IP($value)
+	public static function IP($ip = null)
 	{
-		return (filter_var($value, FILTER_VALIDATE_IP) !== false) ? true : false;
+		return (filter_var($ip, FILTER_VALIDATE_IP) !== false) ? true : false;
 	}
 
-	public static function Set($value)
+	public static function Set($value = null)
 	{
 		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~[[:graph:]]~'))) !== false) ? true : false;
 	}
 
-	public static function URL($value)
+	public static function URL($url = null, $path = null, $query = null)
 	{
-		return (filter_var($value, FILTER_VALIDATE_URL) !== false) ? true : false;
+		$flags = 0;
+
+		foreach (array('path', 'query') as $key)
+		{
+			if ($$key === true)
+			{
+				$flags += constant(sprintf('FILTER_FLAG_%s_REQUIRED', $key));
+			}
+		}
+
+		return (filter_var($value, FILTER_VALIDATE_URL, $flags) !== false) ? true : false;
 	}
 
-	public static function Void($value)
+	public static function Void($value = null)
 	{
 		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[^[:graph:]]*$~'))) !== false) ? true : false;
 	}
@@ -1996,7 +2042,7 @@ class phunction_Math extends phunction
 		{
 			$input = max(2, min(intval($input), strlen($charset)));
 			$output = max(2, min(intval($output), strlen($charset)));
-			$number = ltrim(preg_replace('~[^' . preg_quote(substr($charset, 0, $input), '~') . ']+~', '', $number), $charset[0]);
+			$number = ltrim(preg_replace('~[^' . preg_quote(substr($charset, 0, max($input, $output)), '~') . ']+~', '', $number), $charset[0]);
 
 			if (strlen($number) > 0)
 			{
@@ -2404,6 +2450,39 @@ class phunction_Math extends phunction
 	public static function Round($number, $precision = 0)
 	{
 		return number_format($number, intval($precision), '.', '');
+	}
+
+	public static function Verhoeff($string, $encode = false)
+	{
+		if ($encode > 0)
+		{
+			$d = array_chunk(str_split('0123456789123406789523401789563401289567401239567859876043216598710432765982104387659321049876543210', 1), 10);
+			$p = array_chunk(str_split('01234567891576283094580379614289160435279453126870428657390127938064157046913258', 1), 10);
+			$inv = str_split('0432156789', 1);
+			$encode += 1;
+
+			while (--$encode > 0)
+			{
+				$result = 0;
+				$string = str_split(strrev($string), 1);
+
+				foreach ($string as $key => $value)
+				{
+					$result = $d[$result][$p[($key + 1) % 8][$value]];
+				}
+
+				$string = strrev(implode('', $string)) . $inv[$result];
+			}
+
+			return $string;
+		}
+
+		else if ($string == self::Verhoeff(substr($string, 0, max(1, abs($encode)) * -1), max(1, abs($encode))))
+		{
+			return substr($string, 0, max(1, abs($encode)) * -1);
+		}
+
+		return false;
 	}
 }
 
@@ -3084,9 +3163,9 @@ class phunction_Net extends phunction
 		{
 			$data = array('img' => $input);
 
-			if ((is_file($input) === true) && (filesize($input) <= 1048576))
+			if ((is_file($input = ph()->Disk->Path($input)) === true) && (filesize($input) <= 1048576))
 			{
-				$data = array('files' => '@' . ph()->Disk->Path($input));
+				$data = array('files' => '@' . $input);
 			}
 
 			if (($result = self::CURL('http://www.smushit.com/ws.php', $data, 'POST')) !== false)
@@ -3456,11 +3535,11 @@ class phunction_Text extends phunction
 		return $string;
 	}
 
-	public static function Title($string, $encode = true)
+	public static function Title($string, $raw = true)
 	{
 		if ((($result = ob_get_clean()) !== false) && (ob_start() === true))
 		{
-			echo preg_replace('~<title>([^<]*)</title>~i', '<title>' . (($encode === true) ? addcslashes($string, '\\$') : $string) . '</title>', $result, 1);
+			echo preg_replace('~<title>([^<]*)</title>~i', '<title>' . (($raw === true) ? $string : addcslashes($string, '\\$')) . '</title>', $result, 1);
 		}
 
 		return false;
