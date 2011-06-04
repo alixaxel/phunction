@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.6.2 (github.com/alixaxel/phunction/)
+* phunction 1.6.4 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1297,11 +1297,11 @@ class phunction_Disk extends phunction
 		return false;
 	}
 
-	public static function Map($path, $pattern = '*')
+	public static function Map($path, $pattern = '*', $flags = null)
 	{
 		if (is_dir($path = self::Path($path)) === true)
 		{
-			return parent::Sort(str_replace('\\', '/', glob($path . $pattern, GLOB_MARK | GLOB_BRACE | GLOB_NOSORT)), true, false);
+			return parent::Sort(str_replace('\\', '/', glob($path . $pattern, GLOB_MARK | GLOB_BRACE | GLOB_NOSORT | $flags)), true, false);
 		}
 
 		return (empty($path) !== true) ? array($path) : false;
@@ -1362,7 +1362,7 @@ class phunction_Disk extends phunction
 			mkdir($path, octdec(intval($chmod)), true);
 		}
 
-		if (file_exists($path) === true)
+		if ((isset($path) === true) && (file_exists($path) === true))
 		{
 			return rtrim(str_replace('\\', '/', realpath($path)), '/') . (is_dir($path) ? '/' : '');
 		}
@@ -1409,6 +1409,23 @@ class phunction_Disk extends phunction
 		}
 
 		return $result;
+	}
+
+	public static function Tag($path = null, $tags = null, $fuzzy = true)
+	{
+		if (count($tags = array_filter(array_unique(array_map('phunction_Text::Slug', (array) $tags)), 'strlen')) > 0)
+		{
+			$tags = implode('+', parent::Sort($tags));
+
+			if ((isset($path) === true) && (is_array($path = self::Map($path, '+*+', GLOB_ONLYDIR)) === true))
+			{
+				return preg_grep('~[+]' . str_replace('+', ($fuzzy === true) ? '[+]|[+]' : '[+]', $tags) . '[+]~', $path);
+			}
+
+			return sprintf('+%s+', $tags);
+		}
+
+		return false;
 	}
 
 	public static function Upload($input, $output, $mime = null, $magic = null, $chmod = null)
