@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.6.4 (github.com/alixaxel/phunction/)
+* phunction 1.6.17 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -18,8 +18,6 @@ class phunction
 		set_time_limit(0);
 		error_reporting(-1);
 		ignore_user_abort(true);
-		ini_set('html_errors', 0);
-		ini_set('display_errors', 1);
 		date_default_timezone_set('GMT');
 
 		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
@@ -56,6 +54,8 @@ class phunction
 
 			$GLOBALS[$global] = self::Filter(self::Voodoo($GLOBALS[$global]), false);
 		}
+
+		array_map('ini_set', array('html_errors', 'display_errors', 'default_socket_timeout'), array(0, 1, 3));
 	}
 
 	public function __get($key)
@@ -91,7 +91,10 @@ class phunction
 				$_SESSION[__METHOD__] = array($id => $role);
 			}
 
-			return (current($result = (array) self::Value($_SESSION, __METHOD__)) !== false) ? $result : false;
+			if ((($result = self::Value($_SESSION, __METHOD__)) !== false) && (current($result) !== false))
+			{
+				return $result;
+			}
 		}
 
 		return false;
@@ -233,7 +236,7 @@ class phunction
 				$result = '<pre style="background: #df0; margin: 5px; padding: 5px; text-align: left;">' . htmlspecialchars($result, ENT_QUOTES) . '</pre>';
 			}
 
-			ph()->HTTP->Flush($result . "\n");
+			echo $result . "\n";
 		}
 	}
 
@@ -329,7 +332,7 @@ class phunction
 		return $result;
 	}
 
-	public static function Highway($path)
+	public static function Highway($path, $throttle = null)
 	{
 		if ((is_dir($path = ph()->Disk->Path($path)) === true) && (count($segments = self::Segment(null)) > 0))
 		{
@@ -342,11 +345,16 @@ class phunction
 
 			if (count($class = array_filter(glob($path . $class . '{,_}' . $segment . '.php', GLOB_BRACE), 'is_file')) > 0)
 			{
-				$class = preg_replace('~[.]php$~i', '', current($class));
+				$class = preg_replace('~[.]php$~', '', current($class));
 				$method = (count($segments) > 0) ? array_shift($segments) : self::Value($_SERVER, 'REQUEST_METHOD', 'GET');
 
 				if (is_callable(array(self::Object($class), strtolower($method))) === true)
 				{
+					if ($throttle > 0)
+					{
+						usleep(intval(floatval($throttle) * 1000000));
+					}
+
 					exit(call_user_func_array(array(self::Object($class), strtolower($method)), $segments));
 				}
 			}
@@ -571,10 +579,10 @@ class phunction
 
 		if (in_array($tag, explode('|', 'area|base|basefont|br|col|frame|hr|img|input|link|meta|param')) === true)
 		{
-			return sprintf('<%s%s />', $tag, implode('', $attributes)) . "\n";
+			return sprintf('<%s%s />' . "\n", $tag, implode('', $attributes));
 		}
 
-		return sprintf('<%s%s>%s</%s>', $tag, implode('', $attributes), htmlspecialchars($content), $tag) . "\n";
+		return sprintf('<%s%s>%s</%s>' . "\n", $tag, implode('', $attributes), htmlspecialchars($content), $tag);
 	}
 
 	public static function Text($single, $plural = null, $number = null, $domain = null, $path = null)
@@ -625,19 +633,17 @@ class phunction
 			$ip = ph()->HTTP->IP(null, $proxy);
 			$key = array(__METHOD__, $ip, $proxy);
 
-			if (apc_exists(vsprintf('%s:%s:%b', $key)) !== true)
+			if (is_bool(apc_add(vsprintf('%s:%s:%b', $key), 0, $ttl)) === true)
 			{
-				apc_store(vsprintf('%s:%s:%b', $key), 0, $ttl);
+				$result = apc_inc(vsprintf('%s:%s:%b', $key), intval($count));
+
+				if ($result < $exit)
+				{
+					return ($result / $ttl);
+				}
+
+				return true;
 			}
-
-			$result = apc_inc(vsprintf('%s:%s:%b', $key), intval($count));
-
-			if ($result < $exit)
-			{
-				return ($result / $ttl);
-			}
-
-			return true;
 		}
 
 		return false;
@@ -704,7 +710,12 @@ class phunction
 			return false;
 		}
 
-		return self::URL(getservbyport(self::Value($_SERVER, 'SERVER_PORT', 80), 'tcp') . '://' . self::Value($_SERVER, 'HTTP_HOST') . self::Value($_SERVER, 'REQUEST_URI'), $path, $query);
+		else if (strlen($scheme = preg_replace('~^www$~i', 'http', getservbyport(self::Value($_SERVER, 'SERVER_PORT', 80), 'tcp'))) > 0)
+		{
+			return self::URL($scheme . '://' . self::Value($_SERVER, 'HTTP_HOST') . self::Value($_SERVER, 'REQUEST_URI'), $path, $query);
+		}
+
+		return false;
 	}
 
 	public static function Value($data, $key = null, $default = false)
@@ -1411,7 +1422,7 @@ class phunction_Disk extends phunction
 		return $result;
 	}
 
-	public static function Tag($path = null, $tags = null, $fuzzy = true)
+	public static function Tags($path = null, $tags = null, $fuzzy = true)
 	{
 		if (count($tags = array_filter(array_unique(array_map('phunction_Text::Slug', (array) $tags)), 'strlen')) > 0)
 		{
@@ -1907,21 +1918,26 @@ class phunction_HTTP extends phunction
 		return false;
 	}
 
-	public static function Note($key, $value = null)
+	public static function Note($key, $value = null, $type = null)
 	{
 		if (is_null($value) === true)
 		{
-			$result = self::Cookie(array(__METHOD__, $key));
-
-			if ($result !== false)
+			if (isset($key) === true)
 			{
-				self::Cookie(array(__METHOD__, $key), false);
+				$result = self::Cookie(array(__METHOD__, (empty($type) === true) ? intval($type) : $type, $key));
+
+				if ($result !== false)
+				{
+					self::Cookie(array(__METHOD__, (empty($type) === true) ? intval($type) : $type, $key), false);
+				}
+
+				return (is_bool($result) === true) ? $result : json_decode($result);
 			}
 
-			return (is_bool($result) === true) ? $result : json_decode($result);
+			return array_keys(self::Cookie(array(__METHOD__, (empty($type) === true) ? intval($type) : $type)));
 		}
 
-		return self::Cookie(array(__METHOD__, $key), json_encode($value));
+		return self::Cookie(array(__METHOD__, (empty($type) === true) ? intval($type) : $type, $key), json_encode($value));
 	}
 
 	public static function Sleep($time = 1)
