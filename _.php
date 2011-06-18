@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.6.17 (github.com/alixaxel/phunction/)
+* phunction 1.6.18 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1476,7 +1476,7 @@ class phunction_Disk extends phunction
 
 						if (file_exists($output . $file) === true)
 						{
-							$file = substr_replace($file, '_' . md5_file($_FILES[$input]['tmp_name'][$key]), strrpos($value, '.'), 0);
+							$file = substr_replace($file, '_' . md5_file($_FILES[$input]['tmp_name'][$key]), strrpos($file, '.'), 0);
 						}
 
 						if ((move_uploaded_file($_FILES[$input]['tmp_name'][$key], $output . $file) === true) && (self::Chmod($output . $file, $chmod) === true))
@@ -1924,20 +1924,20 @@ class phunction_HTTP extends phunction
 		{
 			if (isset($key) === true)
 			{
-				$result = self::Cookie(array(__METHOD__, (empty($type) === true) ? intval($type) : $type, $key));
+				$result = self::Cookie(array(__METHOD__, (empty($type) === true) ? 0 : $type, $key));
 
 				if ($result !== false)
 				{
-					self::Cookie(array(__METHOD__, (empty($type) === true) ? intval($type) : $type, $key), false);
+					self::Cookie(array(__METHOD__, (empty($type) === true) ? 0 : $type, $key), false);
 				}
 
 				return (is_bool($result) === true) ? $result : json_decode($result);
 			}
 
-			return array_keys(self::Cookie(array(__METHOD__, (empty($type) === true) ? intval($type) : $type)));
+			return array_keys(self::Cookie(array(__METHOD__, (empty($type) === true) ? 0 : $type)));
 		}
 
-		return self::Cookie(array(__METHOD__, (empty($type) === true) ? intval($type) : $type, $key), json_encode($value));
+		return self::Cookie(array(__METHOD__, (empty($type) === true) ? 0 : $type, $key), json_encode($value));
 	}
 
 	public static function Sleep($time = 1)
