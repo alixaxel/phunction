@@ -1966,6 +1966,23 @@ class phunction_HTTP extends phunction
 		return parent::Value($_SERVER, 'REMOTE_ADDR', '127.0.0.1');
 	}
 
+	public static function JSON($data, $callback = null)
+	{
+		if (is_string($data = json_encode($data)) === true)
+		{
+			$callback = preg_replace('~[^[:alnum:]\[\]_.]~', '', $callback);
+
+			if ((strncmp('cli', PHP_SAPI, 3) !== 0) && (headers_sent() !== true))
+			{
+				header(sprintf('Content-Type: %s', (empty($callback) === true) ? 'application/json' : 'application/javascript'));
+			}
+
+			self::Flush(preg_replace('~^[(](.+)[)];$~s', '$1', sprintf('%s(%s);', $callback, $data)));
+		}
+
+		exit();
+	}
+
 	public static function Method($method, $ajax = false)
 	{
 		if (in_array(parent::Value($_SERVER, 'REQUEST_METHOD', 'GET'), array_map('strtoupper', (array) $method)) === true)
