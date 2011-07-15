@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.6.18 (github.com/alixaxel/phunction/)
+* phunction 1.7.14 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1312,7 +1312,7 @@ class phunction_Disk extends phunction
 	{
 		if (is_dir($path = self::Path($path)) === true)
 		{
-			return parent::Sort(str_replace('\\', '/', glob($path . $pattern, GLOB_MARK | GLOB_BRACE | GLOB_NOSORT | $flags)), true, false);
+			return parent::Sort(str_replace('\\', '/', glob($path . $pattern, GLOB_MARK | GLOB_BRACE | GLOB_NOSORT | $flags)), true);
 		}
 
 		return (empty($path) !== true) ? array($path) : false;
@@ -1426,7 +1426,7 @@ class phunction_Disk extends phunction
 	{
 		if (count($tags = array_filter(array_unique(array_map('phunction_Text::Slug', (array) $tags)), 'strlen')) > 0)
 		{
-			$tags = implode('+', parent::Sort($tags));
+			$tags = implode('+', parent::Sort($tags, true));
 
 			if ((isset($path) === true) && (is_array($path = self::Map($path, '+*+', GLOB_ONLYDIR)) === true))
 			{
@@ -1687,7 +1687,70 @@ class phunction_Disk extends phunction
 	}
 }
 
-class phunction_Form extends phunction
+class phunction_HTML extends phunction
+{
+	public function __construct()
+	{
+	}
+
+	public function __get($key)
+	{
+		$class = __CLASS__ . '_' . $key;
+
+		if (class_exists($class, false) === true)
+		{
+			return $this->$key = new $class();
+		}
+
+		return false;
+	}
+
+	public static function Obfuscate($string, $reverse = true)
+	{
+		if (ph()->Unicode->strlen($string) > 0)
+		{
+			$string = array_map(array('phunction_Unicode', 'ord'), ph()->Unicode->str_split($string));
+
+			if ($reverse !== true)
+			{
+				return sprintf('&#%s;', implode(';&#', $string));
+			}
+
+			return sprintf('<span style="unicode-bidi: bidi-override; direction: rtl;">&#%s;</span>', implode(';&#', array_reverse($string)));
+		}
+
+		return false;
+	}
+
+	public static function Title($string, $raw = true)
+	{
+		if ((($result = ob_get_clean()) !== false) && (ob_start() === true))
+		{
+			echo preg_replace('~<title>([^<]*)</title>~i', '<title>' . (($raw === true) ? $string : addcslashes($string, '\\$')) . '</title>', $result, 1);
+		}
+
+		return false;
+	}
+
+	public static function XSS($string)
+	{
+		if (is_array($string) === true)
+		{
+			$result = array();
+
+			foreach ($string as $key => $value)
+			{
+				$result[self::XSS($key)] = self::XSS($value);
+			}
+
+			return $result;
+		}
+
+		return (is_string($string) === true) ? htmlspecialchars($string, ENT_QUOTES) : $string;
+	}
+}
+
+class phunction_HTML_Form extends phunction_HTML
 {
 	public function __construct()
 	{
@@ -1748,7 +1811,7 @@ class phunction_HTTP extends phunction
 	{
 	}
 
-	function Accept($key = null, $type = null, $match = null, $default = false)
+	public static function Accept($key = null, $type = null, $match = null, $default = false)
 	{
 		$result = array();
 		$header = parent::Value($_SERVER, rtrim('HTTP_ACCEPT_' . strtoupper($type), '_'));
@@ -1940,6 +2003,11 @@ class phunction_HTTP extends phunction
 		return self::Cookie(array(__METHOD__, (empty($type) === true) ? 0 : $type, $key), json_encode($value));
 	}
 
+	public static function Secure()
+	{
+		return (strcasecmp('off', parent::Value($_SERVER, 'HTTPS', 'off')) !== 0) ? true : false;
+	}
+
 	public static function Sleep($time = 1)
 	{
 		return usleep(intval(floatval($time) * 1000000));
@@ -2031,17 +2099,12 @@ class phunction_Is extends phunction
 
 	public static function URL($url = null, $path = null, $query = null)
 	{
-		$flags = 0;
-
 		foreach (array('path', 'query') as $key)
 		{
-			if ($$key === true)
-			{
-				$flags += constant(sprintf('FILTER_FLAG_%s_REQUIRED', $key));
-			}
+			$$key = (empty($$key) === true) ? 0 : constant(sprintf('FILTER_FLAG_%s_REQUIRED', $key));
 		}
 
-		return (filter_var($value, FILTER_VALIDATE_URL, $flags) !== false) ? true : false;
+		return (filter_var($value, FILTER_VALIDATE_URL, $path + $query) !== false) ? true : false;
 	}
 
 	public static function Void($value = null)
@@ -2069,7 +2132,7 @@ class phunction_Math extends phunction
 		return ($result / max(1, count($arguments)));
 	}
 
-	public static function Base($number, $input, $output, $charset = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+	public static function Base($input, $output, $number = 1, $charset = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 	{
 		if (strlen($charset) >= 2)
 		{
@@ -2525,6 +2588,18 @@ class phunction_Net extends phunction
 	{
 	}
 
+	public function __get($key)
+	{
+		$class = __CLASS__ . '_' . $key;
+
+		if (class_exists($class, false) === true)
+		{
+			return $this->$key = new $class();
+		}
+
+		return false;
+	}
+
 	public static function Captcha($value = null, $background = null)
 	{
 		if (strlen(session_id()) > 0)
@@ -2551,7 +2626,7 @@ class phunction_Net extends phunction
 							}
 						}
 
-						return sprintf('http://services.sapo.pt/Captcha/Show/?id=%s', strtolower($result));
+						return preg_replace('~^https?:~', '', parent::URL('http://services.sapo.pt/', '/Captcha/Show/', array('id' => strtolower($result))));
 					}
 				}
 			}
@@ -2662,7 +2737,7 @@ class phunction_Net extends phunction
 		return $result;
 	}
 
-	public static function Currency($value = 1, $input = null, $output = null, $ttl = null)
+	public static function Currency($input, $output, $value = 1, $ttl = null)
 	{
 		$key = array(__METHOD__);
 		$result = parent::Cache(vsprintf('%s', $key));
@@ -2861,9 +2936,8 @@ class phunction_Net extends phunction
 				if (isset($smtp) === true)
 				{
 					$result = null;
-					$stream = stream_socket_client($smtp);
 
-					if (is_resource($stream) === true)
+					if (is_resource($stream = stream_socket_client($smtp)) === true)
 					{
 						$data = array('HELO ' . parent::Value($_SERVER, 'HTTP_HOST', 'localhost'));
 						$result .= substr(ltrim(fread($stream, 8192)), 0, 3);
@@ -2916,23 +2990,6 @@ class phunction_Net extends phunction
 		return false;
 	}
 
-	public static function Geo($query, $country = null)
-	{
-		$data = array
-		(
-			'address' => $query,
-			'region' => $country,
-			'sensor' => 'false',
-		);
-
-		if (($result = self::CURL('http://maps.googleapis.com/maps/api/geocode/json', $data)) !== false)
-		{
-			return parent::Value(json_decode($result, true), array('results', 0, 'geometry', 'location'));
-		}
-
-		return false;
-	}
-
 	public static function GeoIP($ip = null, $proxy = false, $ttl = 86400)
 	{
 		$ip = ph()->HTTP->IP($ip, $proxy);
@@ -2956,14 +3013,14 @@ class phunction_Net extends phunction
 		return (geoip_db_avail(GEOIP_COUNTRY_EDITION) === true) ? geoip_country_code_by_name($ip) : false;
 	}
 
-	public static function Gravatar($id, $size = 80, $rating = 'g', $default = 'identicon', $secure = null)
+	public static function Gravatar($id, $size = 80, $rating = 'g', $default = 'identicon')
 	{
-		if (($secure === true) || ((is_null($secure) === true) && (strcasecmp('off', parent::Value($_SERVER, 'HTTPS', 'off')) !== 0)))
+		if (ph()->HTTP->Secure() === true)
 		{
 			return sprintf('https://secure.gravatar.com/avatar/%s?s=%u&r=%s&d=%s', md5(strtolower(trim($id))), $size, $rating, urlencode($default));
 		}
 
-		return sprintf('http://www.gravatar.com/avatar/%s?s=%u&r=%s&d=%s', md5(strtolower(trim($id))), $size, $rating, urlencode($default));
+		return sprintf('http://gravatar.com/avatar/%s?s=%u&r=%s&d=%s', md5(strtolower(trim($id))), $size, $rating, urlencode($default));
 	}
 
 	public static function OpenID($id, $realm = null, $return = null, $verify = true)
@@ -3066,29 +3123,6 @@ class phunction_Net extends phunction
 		return false;
 	}
 
-	public static function PayPal($email, $status = 'Completed', $sandbox = false)
-	{
-		static $result = null;
-
-		if ((is_null($result) === true) && (preg_match('~^(?:.+[.])?paypal[.]com$~', gethostbyaddr(ph()->HTTP->IP(null, false))) > 0))
-		{
-			$result = self::CURL('https://www' . (($sandbox === true) ? '.sandbox' : '') . '.paypal.com/cgi-bin/webscr/', array_merge(array('cmd' => '_notify-validate'), $_POST), 'POST');
-		}
-
-		if (strncmp('VERIFIED', $result, 8) === 0)
-		{
-			$email = strlen($email) * strcasecmp($email, parent::Value($_POST, 'receiver_email'));
-			$status = strlen($status) * strcasecmp($status, parent::Value($_POST, 'payment_status'));
-
-			if (($email == 0) && ($status == 0))
-			{
-				return (object) $_POST;
-			}
-		}
-
-		return false;
-	}
-
 	public static function Reducisaurus($input, $type = null, $output = null, $chmod = null, $ttl = 3600)
 	{
 		if (isset($input, $type) === true)
@@ -3121,7 +3155,7 @@ class phunction_Net extends phunction
 					$result = ph()->Disk->File($output, $result, false, $chmod, $ttl);
 				}
 
-				return $result;
+				return preg_replace('~^https?:~', '', $result);
 			}
 		}
 
@@ -3235,24 +3269,7 @@ class phunction_Net extends phunction
 			$image = ph()->URL(null, $image);
 		}
 
-		return sprintf('http://i.tinysrc.mobi/%s%s%s', ltrim($format . '/', '/'), ltrim(implode('/', array_slice(explode('*', $scale), 0, 2)) . '/', '/'), $image);
-	}
-
-	public static function Translate($string, $input = null, $output = null)
-	{
-		$data = array
-		(
-			'v' => '1.0',
-			'q' => $string,
-			'langpair' => sprintf('%s|%s', $input, $output),
-		);
-
-		if (($result = self::CURL('http://ajax.googleapis.com/ajax/services/language/translate', $data)) !== false)
-		{
-			return parent::Value(json_decode($result, true), array('responseData', 'translatedText'));
-		}
-
-		return false;
+		return sprintf('http://src.sencha.io/%s%s%s', ltrim($format . '/', '/'), ltrim(implode('/', array_slice(explode('*', $scale), 0, 2)) . '/', '/'), $image);
 	}
 
 	public static function VIES($vatin, $country)
@@ -3265,25 +3282,6 @@ class phunction_Net extends phunction
 			{
 				return parent::Value($soap->__soapCall('checkVat', array(array('countryCode' => $country, 'vatNumber' => $vatin))), 'valid');
 			}
-		}
-
-		return false;
-	}
-
-	public static function Weather($query)
-	{
-		$weather = self::XML(self::CURL('http://www.google.com/ig/api', array('weather' => $query)));
-
-		if ($weather !== false)
-		{
-			$result = array();
-
-			foreach (self::XML($weather, '//forecast_conditions') as $key => $value)
-			{
-				$result[$key] = array(strval($value->low['data']), strval($value->high['data']));
-			}
-
-			return $result;
 		}
 
 		return false;
@@ -3359,6 +3357,321 @@ class phunction_Net extends phunction
 	}
 }
 
+class phunction_Net_Akismet extends phunction_Net
+{
+	public function __construct()
+	{
+	}
+
+	public static function Check($key, $text, $name = null, $email = null, $domain = null, $type = null)
+	{
+		$data = array
+		(
+			'blog' => parent::URL(null, false, false),
+			'comment_author' => $name,
+			'comment_author_email' => $email,
+			'comment_author_url' => $domain,
+			'comment_content' => $text,
+			'comment_type' => $type,
+			'permalink' => parent::URL(null, null, null),
+			'referrer' => parent::Value($_SERVER, 'HTTP_REFERER'),
+			'user_agent' => parent::Value($_SERVER, 'HTTP_USER_AGENT'),
+			'user_ip' => ph()->HTTP->IP(null, false),
+		);
+
+		if (($result = parent::CURL(sprintf('http://%s.rest.akismet.com/1.1/comment-check', $key), array_merge($data, preg_grep('~^HTTP_~', $_SERVER)), 'POST')) !== false)
+		{
+			return (strcmp('true', $result) === 0) ? true : false;
+		}
+
+		return false;
+	}
+
+	public static function Submit($key, $text, $name = null, $email = null, $domain = null, $type = null, $endpoint = null)
+	{
+		if (in_array($endpoint, array('ham', 'spam')) === true)
+		{
+			$data = array
+			(
+				'blog' => parent::URL(null, false, false),
+				'comment_author' => $name,
+				'comment_author_email' => $email,
+				'comment_author_url' => $domain,
+				'comment_content' => $text,
+				'comment_type' => $type,
+				'permalink' => parent::URL(null, null, null),
+				'referrer' => parent::Value($_SERVER, 'HTTP_REFERER'),
+				'user_agent' => parent::Value($_SERVER, 'HTTP_USER_AGENT'),
+				'user_ip' => ph()->HTTP->IP(null, false),
+			);
+
+			if (($result = parent::CURL(sprintf('http://%s.rest.akismet.com/1.1/submit-%s', $key, $endpoint), $data, 'POST')) !== false)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	public static function Verify($key)
+	{
+		$data = array
+		(
+			'key' => $key,
+			'blog' => parent::URL(null, false, false),
+		);
+
+		if (($result = parent::CURL(sprintf('http://%s.rest.akismet.com/1.1/verify-key', $key), $data, 'POST')) !== false)
+		{
+			return (strcmp('valid', $result) === 0) ? true : false;
+		}
+
+		return false;
+	}
+}
+
+class phunction_Net_Google extends phunction_Net
+{
+	public function __construct()
+	{
+	}
+
+	public static function Calculator($input, $output, $query = 1)
+	{
+		$data = array
+		(
+			'q' => $query . $input . '=?' . $output,
+		);
+
+		if (($result = parent::CURL('http://www.google.com/ig/calculator', $data)) !== false)
+		{
+			$result = preg_replace(array('~([{,])~', '~:[[:blank:]]+~'), array('$1"', '":'), parent::Filter($result, true));
+
+			if ((is_array($result = json_decode($result, true)) === true) && (strlen(parent::Value($result, 'error')) == 0))
+			{
+				return parent::Value($result, 'rhs');
+			}
+		}
+
+		return false;
+	}
+
+	public static function Distance($input, $output, $mode = null, $avoid = null, $units = null)
+	{
+		$data = array
+		(
+			'avoid' => $avoid,
+			'destinations' => implode('|', (array) $output),
+			'mode' => $mode,
+			'origins' => implode('|', (array) $input),
+			'sensor' => 'false',
+			'units' => $units,
+		);
+
+		if (is_array($result = json_decode(parent::CURL('http://maps.googleapis.com/maps/api/distancematrix/json', $data), true)) === true)
+		{
+			return parent::Value($result, 'rows');
+		}
+
+		return false;
+	}
+
+	public static function Geocode($query, $country = null, $reverse = false)
+	{
+		$data = array
+		(
+			'address' => $query,
+			'region' => $country,
+			'sensor' => 'false',
+		);
+
+		if (is_array($result = json_decode(parent::CURL('http://maps.googleapis.com/maps/api/geocode/json', $data), true)) === true)
+		{
+			return parent::Value($result, ($reverse === true) ? array('results', 0, 'formatted_address') : array('results', 0, 'geometry', 'location'));
+		}
+
+		return false;
+	}
+
+	public static function Icon($url)
+	{
+		return preg_replace('~^https?:~', '', parent::URL('http://www.google.com/', '/s2/favicons', array('domain' => $url)));
+	}
+
+	public static function Map($query, $type = 'roadmap', $size = '500x300', $zoom = 12, $markers = null)
+	{
+		$data = array
+		(
+			'center' => $query,
+			'maptype' => $type,
+			'markers' => implode('|', (array) $markers),
+			'sensor' => 'false',
+			'size' => $size,
+			'zoom' => $zoom,
+		);
+
+		return preg_replace('~^https?:~', '', parent::URL('http://maps.google.com/', '/maps/api/staticmap', $data));
+	}
+
+	public static function Search($query, $class = 'web', $start = 0, $results = 4, $arguments = null)
+	{
+		$data = array
+		(
+			'q' => $query,
+			'rsz' => $results,
+			'start' => intval($start),
+			'userip' => ph()->HTTP->IP(null, false),
+			'v' => '1.0',
+		);
+
+		if (is_array($result = json_decode(parent::CURL('http://ajax.googleapis.com/ajax/services/search/' . $class, $data), true)) === true)
+		{
+			return (is_array($result = parent::Value($result, 'responseData')) === true) ? $result : false;
+		}
+
+		return false;
+	}
+
+	public static function Speed($url)
+	{
+		if (is_array($result = json_decode(parent::CURL('http://pagespeed.googlelabs.com/run_pagespeed', array('url' => $url)), true)) === true)
+		{
+			return parent::Value($result, 'results');
+		}
+
+		return false;
+	}
+
+	public static function Talk($to, $message, $username, $password)
+	{
+		$id = null;
+
+		if (is_resource($stream = stream_socket_client('tcp://talk.google.com:5222/')) === true)
+		{
+			$data = array
+			(
+				'<stream:stream to="gmail.com" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">',
+				'<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"><required /></starttls>',
+				'<stream:stream to="gmail.com" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">',
+				'<auth mechanism="PLAIN" xmlns="urn:ietf:params:xml:ns:xmpp-sasl">' . base64_encode("\0" . $username . "\0" . $password) . '</auth>',
+				'<stream:stream to="gmail.com" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">',
+				'<iq id="1" type="set" xmlns="jabber:client"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>' . __FUNCTION__ . '</resource></bind></iq>',
+				'<iq id="2" type="set" xmlns="jabber:client"><session xmlns="urn:ietf:params:xml:ns:xmpp-session" /></iq>',
+				'<message from="%s" to="' . htmlspecialchars($to) . '" type="chat"><body>' . htmlspecialchars($message) . '</body></message>',
+				'</stream:stream>',
+			);
+
+			while ((count($data) > 0) && (fwrite($stream, sprintf(array_shift($data), $id)) !== false))
+			{
+				while ((@stream_select($read = array($stream), $write = null, $except = null, 0, 100000) > 0) && (feof($stream) !== true))
+				{
+					if ((($result = fread($stream, 8192)) !== false) && (is_null($id) === true))
+					{
+						$result = parent::XML($result);
+
+						if (is_object(parent::XML($result, '//jid', 0)) === true)
+						{
+							$id = strval(parent::XML($result, '//jid', 0));
+						}
+
+						else if (is_object(parent::XML($result, '//proceed', 0)) === true)
+						{
+							stream_socket_enable_crypto($stream, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+						}
+					}
+				}
+			}
+
+			fclose($stream);
+		}
+
+		return (isset($id) === true) ? true : false;
+	}
+
+	public static function Translate($input, $output, $query = null)
+	{
+		$data = array
+		(
+			'langpair' => sprintf('%s|%s', $input, $output),
+			'q' => $query,
+			'v' => '1.0',
+		);
+
+		if (($result = parent::CURL('http://ajax.googleapis.com/ajax/services/language/translate', $data)) !== false)
+		{
+			return parent::Value(json_decode($result, true), array('responseData', 'translatedText'));
+		}
+
+		return false;
+	}
+
+	public static function Weather($query)
+	{
+		$weather = parent::XML(parent::CURL('http://www.google.com/ig/api', array('weather' => $query)));
+
+		if ($weather !== false)
+		{
+			$result = array();
+
+			foreach (parent::XML($weather, '//forecast_conditions') as $key => $value)
+			{
+				$result[$key] = array(strval($value->low['data']), strval($value->high['data']));
+			}
+
+			return $result;
+		}
+
+		return false;
+	}
+}
+
+class phunction_Net_PayPal extends phunction_Net
+{
+	public function __construct()
+	{
+	}
+
+	public static function API($auth, $data, $method, $version, $endpoint = 'https://api-3t.paypal.com/nvp/')
+	{
+		if (($result = parent::CURL($endpoint, array_merge(array('METHOD' => $method, 'VERSION' => $version), (array) $auth, (array) $data), 'POST')) !== false)
+		{
+			parse_str($result, $result);
+
+			if (is_array($result = parent::Voodoo($result)) === true)
+			{
+				foreach (preg_grep('~^L_[[:alnum:]_]+?[0-9]+$~', array_keys($result)) as $key)
+				{
+					$result[rtrim($key, '0..9')][] = $result[$key]; unset($result[$key]);
+				}
+
+				return $result;
+			}
+		}
+
+		return false;
+	}
+
+	public static function IPN($email, $status = null, $endpoint = 'https://www.paypal.com/cgi-bin/webscr/')
+	{
+		if (preg_match('~(?:^|[.])paypal[.]com$~i', gethostbyaddr(ph()->HTTP->IP(null, false))) > 0)
+		{
+			if (strncmp('VERIFIED', parent::CURL($endpoint, array_merge(array('cmd' => '_notify-validate'), $_POST), 'POST'), 8) === 0)
+			{
+				$email = strlen($email) * strcasecmp($email, parent::Value($_POST, 'receiver_email'));
+				$status = strlen($status) * strcasecmp($status, parent::Value($_POST, 'payment_status'));
+
+				if (($email == 0) && ($status == 0))
+				{
+					return $_POST;
+				}
+			}
+		}
+
+		return false;
+	}
+}
+
 class phunction_Text extends phunction
 {
 	public function __construct()
@@ -3410,6 +3723,16 @@ class phunction_Text extends phunction
 		}
 
 		return $i = 0;
+	}
+
+	public static function Enclose($string, $delimiter = null)
+	{
+		if (strlen($string = trim($string)) > 0)
+		{
+			$string = sprintf('%s%s%s', $delimiter, $string, $delimiter);
+		}
+
+		return $string;
 	}
 
 	public static function Entropy($string)
@@ -3514,23 +3837,6 @@ class phunction_Text extends phunction
 		return ph()->Unicode->ucwords(ph()->Unicode->strtolower(preg_replace('~\s*\b(\p{L}+)\b.+\b(\p{L}+)\b\s*~u', '$1 $2', $string)));
 	}
 
-	public static function Obfuscate($string, $css = true)
-	{
-		if (ph()->Unicode->strlen($string) > 0)
-		{
-			$string = array_map(array('phunction_Unicode', 'ord'), ph()->Unicode->str_split($string));
-
-			if ($css !== true)
-			{
-				return sprintf('&#%s;', implode(';&#', $string));
-			}
-
-			return sprintf('<span style="unicode-bidi: bidi-override; direction: rtl;">&#%s;</span>', implode(';&#', array_reverse($string)));
-		}
-
-		return false;
-	}
-
 	public static function Reduce($string, $search, $modifiers = false)
 	{
 		return preg_replace('~' . preg_quote($search, '~') . '+~' . $modifiers, $search, $string);
@@ -3558,26 +3864,6 @@ class phunction_Text extends phunction
 		return strtolower(trim(preg_replace('~[^0-9a-z' . preg_quote($extra, '~') . ']+~i', $slug, self::Unaccent($string)), $slug));
 	}
 
-	public static function Surround($string, $surround = null)
-	{
-		if (strlen($string = trim($string)) > 0)
-		{
-			$string = sprintf('%s%s%s', $surround, $string, $surround);
-		}
-
-		return $string;
-	}
-
-	public static function Title($string, $raw = true)
-	{
-		if ((($result = ob_get_clean()) !== false) && (ob_start() === true))
-		{
-			echo preg_replace('~<title>([^<]*)</title>~i', '<title>' . (($raw === true) ? $string : addcslashes($string, '\\$')) . '</title>', $result, 1);
-		}
-
-		return false;
-	}
-
 	public static function Truncate($string, $limit, $more = '...')
 	{
 		if (ph()->Unicode->strlen($string = trim($string)) > $limit)
@@ -3596,23 +3882,6 @@ class phunction_Text extends phunction
 		}
 
 		return $string;
-	}
-
-	public static function XSS($string)
-	{
-		if (is_array($string) === true)
-		{
-			$result = array();
-
-			foreach ($string as $key => $value)
-			{
-				$result[self::XSS($key)] = self::XSS($value);
-			}
-
-			return $result;
-		}
-
-		return (is_string($string) === true) ? htmlspecialchars($string, ENT_QUOTES) : $string;
 	}
 }
 
