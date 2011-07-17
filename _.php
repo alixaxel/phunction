@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.7.14 (github.com/alixaxel/phunction/)
+* phunction 1.7.16 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1303,6 +1303,31 @@ class phunction_Disk extends phunction
 		else if (count($result = @GetImageSize($input)) >= 2)
 		{
 			return array_map('intval', array_slice($result, 0, 2));
+		}
+
+		return false;
+	}
+
+	public static function Log($log, $path, $debug = false)
+	{
+		if (is_file($path = strftime($path, time()) . '.php') !== true)
+		{
+			self::File(self::Path(dirname($path), true) . basename($path), '<?php exit(); ?>' . "\n\n", true);
+		}
+
+		if (self::File($path, sprintf('[%s]: %s', parent::Date('DATETIME'), trim($log)) . "\n", true) === true)
+		{
+			if (($debug === true) && (ob_start() === true))
+			{
+				debug_print_backtrace();
+
+				if (($backtrace = ob_get_clean()) !== false)
+				{
+					self::File($path, ph()->Text->Indent(trim($backtrace)) . "\n\n", true);
+				}
+			}
+
+			return true;
 		}
 
 		return false;
@@ -4053,11 +4078,11 @@ class phunction_Unicode extends phunction
 		{
 			if (preg_match('~\p{Lu}~u', $value) > 0)
 			{
-				$string[$key] = '&#' . (self::ord($value) + 32) . ';';
+				$string[$key] = html_entity_decode('&#' . (self::ord($value) + 32) . ';', ENT_QUOTES, 'UTF-8');
 			}
 		}
 
-		return html_entity_decode(implode('', $string), ENT_QUOTES, 'UTF-8');
+		return implode('', $string);
 	}
 
 	public static function strtoupper($string)
@@ -4068,11 +4093,11 @@ class phunction_Unicode extends phunction
 		{
 			if (preg_match('~\p{Ll}~u', $value) > 0)
 			{
-				$string[$key] = '&#' . (self::ord($value) - 32) . ';';
+				$string[$key] = html_entity_decode('&#' . (self::ord($value) - 32) . ';', ENT_QUOTES, 'UTF-8');
 			}
 		}
 
-		return html_entity_decode(implode('', $string), ENT_QUOTES, 'UTF-8');
+		return implode('', $string);
 	}
 
 	public static function substr($string, $offset = null, $length = null)
