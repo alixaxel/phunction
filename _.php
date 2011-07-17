@@ -4072,14 +4072,9 @@ class phunction_Unicode extends phunction
 
 	public static function strtolower($string)
 	{
-		$string = self::str_split($string);
-
-		foreach ($string as $key => $value)
+		foreach (preg_grep('~\p{Lu}~u', $string = self::str_split($string)) as $key => $value)
 		{
-			if (preg_match('~\p{Lu}~u', $value) > 0)
-			{
-				$string[$key] = html_entity_decode('&#' . (self::ord($value) + 32) . ';', ENT_QUOTES, 'UTF-8');
-			}
+			$string[$key] = html_entity_decode('&#' . (self::ord($value) + 32) . ';', ENT_QUOTES, 'UTF-8');
 		}
 
 		return implode('', $string);
@@ -4087,14 +4082,9 @@ class phunction_Unicode extends phunction
 
 	public static function strtoupper($string)
 	{
-		$string = self::str_split($string);
-
-		foreach ($string as $key => $value)
+		foreach (preg_grep('~\p{Ll}~u', $string = self::str_split($string)) as $key => $value)
 		{
-			if (preg_match('~\p{Ll}~u', $value) > 0)
-			{
-				$string[$key] = html_entity_decode('&#' . (self::ord($value) - 32) . ';', ENT_QUOTES, 'UTF-8');
-			}
+			$string[$key] = html_entity_decode('&#' . (self::ord($value) - 32) . ';', ENT_QUOTES, 'UTF-8');
 		}
 
 		return implode('', $string);
