@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.7.16 (github.com/alixaxel/phunction/)
+* phunction 1.7.17 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -2686,13 +2686,9 @@ class phunction_Net extends phunction
 
 		if ($result === false)
 		{
-			$countries = self::CURL('http://www.geonames.org/countryInfoJSON', array('lang' => $language));
-
-			if ($countries !== false)
+			if (($countries = self::CURL('http://www.geonames.org/countryInfoJSON', array('lang' => $language))) !== false)
 			{
-				$countries = parent::Value(json_decode($countries, true), 'geonames');
-
-				if (is_array($countries) === true)
+				if (is_array($countries = parent::Value(json_decode($countries, true), 'geonames')) === true)
 				{
 					$result = array();
 
@@ -3511,9 +3507,27 @@ class phunction_Net_Google extends phunction_Net
 			'units' => $units,
 		);
 
-		if (is_array($result = json_decode(parent::CURL('http://maps.googleapis.com/maps/api/distancematrix/json', $data), true)) === true)
+		if (($result = parent::CURL('http://maps.googleapis.com/maps/api/distancematrix/json', $data)) !== false)
 		{
-			return parent::Value($result, 'rows');
+			return parent::Value(json_decode($result, true), 'rows');
+		}
+
+		return false;
+	}
+
+	public static function Feed($url, $entries = -1)
+	{
+		$data = array
+		(
+			'num' => intval($entries),
+			'output' => 'json',
+			'q' => $url,
+			'v' => '1.0',
+		);
+
+		if (($result = parent::CURL('http://ajax.googleapis.com/ajax/services/feed/load', $data)) !== false)
+		{
+			return parent::Value(json_decode($result, true), array('responseData', 'feed'));
 		}
 
 		return false;
@@ -3528,9 +3542,9 @@ class phunction_Net_Google extends phunction_Net
 			'sensor' => 'false',
 		);
 
-		if (is_array($result = json_decode(parent::CURL('http://maps.googleapis.com/maps/api/geocode/json', $data), true)) === true)
+		if (($result = parent::CURL('http://maps.googleapis.com/maps/api/geocode/json', $data)) !== false)
 		{
-			return parent::Value($result, ($reverse === true) ? array('results', 0, 'formatted_address') : array('results', 0, 'geometry', 'location'));
+			return parent::Value(json_decode($result, true), ($reverse === true) ? array('results', 0, 'formatted_address') : array('results', 0, 'geometry', 'location'));
 		}
 
 		return false;
@@ -3556,6 +3570,42 @@ class phunction_Net_Google extends phunction_Net
 		return preg_replace('~^https?:~', '', parent::URL('http://maps.google.com/', '/maps/api/staticmap', $data));
 	}
 
+	public static function Rank($url)
+	{
+		if ((($url = parent::URL($url)) !== false) && (($result = parent::CURL('http://snurl.com/1invai', array('string' => $url))) !== false))
+		{
+			$data = array
+			(
+				'ch' => ph()->Text->Regex($result, '<pre>([0-9]+)</pre>', array(1, 0)),
+				'client' => 'navclient-auto-ff',
+				'features' => 'Rank',
+				'q' => 'info:' . $url,
+			);
+
+			return intval(ltrim(strrchr(parent::CURL('http://toolbarqueries.google.com/search', $data), ':'), ':'));
+		}
+
+		return false;
+	}
+
+	public static function reCAPTCHA($key)
+	{
+		$data = array
+		(
+			'challenge' => parent::Value($_POST, 'recaptcha_challenge_field'),
+			'privatekey' => $key,
+			'remoteip' => ph()->HTTP->IP(),
+			'response' => trim(parent::Value($_POST, 'recaptcha_response_field')),
+		);
+
+		if ((count(array_filter($data, 'strlen')) == 4) && (($result = parent::CURL('http://www.google.com/recaptcha/api/verify', $data, 'POST')) !== false))
+		{
+			return (strncasecmp('true', $result, 4) === 0) ? true : parent::Value(explode("\n", $result), 1, 'incorrect-captcha-sol');
+		}
+
+		return false;
+	}
+
 	public static function Search($query, $class = 'web', $start = 0, $results = 4, $arguments = null)
 	{
 		$data = array
@@ -3567,9 +3617,9 @@ class phunction_Net_Google extends phunction_Net
 			'v' => '1.0',
 		);
 
-		if (is_array($result = json_decode(parent::CURL('http://ajax.googleapis.com/ajax/services/search/' . $class, $data), true)) === true)
+		if (($result = parent::CURL('http://ajax.googleapis.com/ajax/services/search/' . $class, $data)) !== false)
 		{
-			return (is_array($result = parent::Value($result, 'responseData')) === true) ? $result : false;
+			return (is_array($result = parent::Value(json_decode($result, true), 'responseData')) === true) ? $result : false;
 		}
 
 		return false;
@@ -3577,9 +3627,9 @@ class phunction_Net_Google extends phunction_Net
 
 	public static function Speed($url)
 	{
-		if (is_array($result = json_decode(parent::CURL('http://pagespeed.googlelabs.com/run_pagespeed', array('url' => $url)), true)) === true)
+		if (($result = parent::CURL('http://pagespeed.googlelabs.com/run_pagespeed', array('url' => $url))) !== false)
 		{
-			return parent::Value($result, 'results');
+			return parent::Value(json_decode($result, true), 'results');
 		}
 
 		return false;
