@@ -563,28 +563,6 @@ class phunction
 		return false;
 	}
 
-	public static function Tag($tag, $content = null)
-	{
-		$tag = htmlspecialchars(strtolower(trim($tag)));
-		$arguments = array_filter(array_slice(func_get_args(), 2), 'is_array');
-		$attributes = (empty($arguments) === true) ? array() : call_user_func_array('array_merge', $arguments);
-
-		if ((count($attributes) > 0) && (ksort($attributes) === true))
-		{
-			foreach ($attributes as $key => $value)
-			{
-				$attributes[$key] = sprintf(' %s="%s"', htmlspecialchars($key), ($value === true) ? htmlspecialchars($key) : htmlspecialchars($value));
-			}
-		}
-
-		if (in_array($tag, explode('|', 'area|base|basefont|br|col|frame|hr|img|input|link|meta|param')) === true)
-		{
-			return sprintf('<%s%s />' . "\n", $tag, implode('', $attributes));
-		}
-
-		return sprintf('<%s%s>%s</%s>' . "\n", $tag, implode('', $attributes), htmlspecialchars($content), $tag);
-	}
-
 	public static function Text($single, $plural = null, $number = null, $domain = null, $path = null)
 	{
 		static $result = null;
@@ -1315,7 +1293,9 @@ class phunction_Disk extends phunction
 			self::File(self::Path(dirname($path), true) . basename($path), '<?php exit(); ?>' . "\n\n", true);
 		}
 
-		if (self::File($path, sprintf('[%s]: %s', parent::Date('DATETIME'), trim($log)) . "\n", true) === true)
+		$ip = implode(' -> ', array_unique(ph()->HTTP->IP(null, true), ph()->HTTP->IP(null, false)));
+
+		if (self::File($path, sprintf('[%s] @ %s: %s', $ip, parent::Date('DATETIME'), trim($log)) . "\n", true) === true)
 		{
 			if (($debug === true) && (ob_start() === true))
 			{
@@ -1447,7 +1427,7 @@ class phunction_Disk extends phunction
 		return $result;
 	}
 
-	public static function Tags($path = null, $tags = null, $fuzzy = true)
+	public static function Tag($path = null, $tags = null, $fuzzy = true)
 	{
 		if (count($tags = array_filter(array_unique(array_map('phunction_Text::Slug', (array) $tags)), 'strlen')) > 0)
 		{
@@ -1745,6 +1725,28 @@ class phunction_HTML extends phunction
 		}
 
 		return false;
+	}
+
+	public static function Tag($tag, $content = null)
+	{
+		$tag = htmlspecialchars(strtolower(trim($tag)));
+		$arguments = array_filter(array_slice(func_get_args(), 2), 'is_array');
+		$attributes = (empty($arguments) === true) ? array() : call_user_func_array('array_merge', $arguments);
+
+		if ((count($attributes) > 0) && (ksort($attributes) === true))
+		{
+			foreach ($attributes as $key => $value)
+			{
+				$attributes[$key] = sprintf(' %s="%s"', htmlspecialchars($key), ($value === true) ? htmlspecialchars($key) : htmlspecialchars($value));
+			}
+		}
+
+		if (in_array($tag, explode('|', 'area|base|basefont|br|col|frame|hr|img|input|link|meta|param')) === true)
+		{
+			return sprintf('<%s%s />' . "\n", $tag, implode('', $attributes));
+		}
+
+		return sprintf('<%s%s>%s</%s>' . "\n", $tag, implode('', $attributes), htmlspecialchars($content), $tag);
 	}
 
 	public static function Title($string, $raw = true)
