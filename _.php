@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.7.17 (github.com/alixaxel/phunction/)
+* phunction 1.7.19 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -2148,7 +2148,7 @@ class phunction_Is extends phunction
 			$$key = (empty($$key) === true) ? 0 : constant(sprintf('FILTER_FLAG_%s_REQUIRED', $key));
 		}
 
-		return (filter_var($value, FILTER_VALIDATE_URL, $path + $query) !== false) ? true : false;
+		return (filter_var($url, FILTER_VALIDATE_URL, $path + $query) !== false) ? true : false;
 	}
 
 	public static function Void($value = null)
@@ -3115,7 +3115,7 @@ class phunction_Net extends phunction
 					{
 						$server = parent::Value($xml, 'uri');
 
-						if ($key === 0)
+						if ($key == 0)
 						{
 							$delegate = 'http://specs.openid.net/auth/2.0/identifier_select';
 
@@ -3125,7 +3125,7 @@ class phunction_Net extends phunction
 							}
 						}
 
-						else if ($key === 1)
+						else if ($key == 1)
 						{
 							$delegate = parent::Value($xml, 'delegate', $id);
 						}
@@ -3774,9 +3774,7 @@ class phunction_Text extends phunction
 
 	public static function Comify($array, $last = ' and ')
 	{
-		$array = array_filter(array_unique((array) $array), 'strlen');
-
-		if (count($array) >= 3)
+		if (count($array = array_filter(array_unique((array) $array), 'strlen')) >= 3)
 		{
 			$array = array(implode(', ', array_slice($array, 0, -1)), implode('', array_slice($array, -1)));
 		}
