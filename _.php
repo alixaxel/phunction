@@ -3116,7 +3116,7 @@ class phunction_Net extends phunction
 						$delegate = strval(self::XML($result, sprintf('//head/link[contains(@rel, "%s")]/@href', $namespace[1]), 0, $id));
 					}
 
-					else if (is_object($xml = self::XML($result, sprintf('//xrd/service[contains(type, "http://%s")]', $namespace), 0)) === true)
+					else if (is_object($xml = self::XML($result, sprintf('//xrd/service[contains(type, "://%s")]', $namespace), 0)) === true)
 					{
 						$server = parent::Value($xml, 'uri');
 
@@ -4129,7 +4129,10 @@ class phunction_Unicode extends phunction
 	{
 		foreach (preg_grep('~\p{Lu}~u', $string = self::str_split($string)) as $key => $value)
 		{
-			$string[$key] = html_entity_decode('&#' . (self::ord($value) + 32) . ';', ENT_QUOTES, 'UTF-8');
+			if (preg_match('~^' . preg_quote($string[$key], '~') . '$~iu', $value = self::chr(self::ord($value) + 32)) > 0)
+			{
+				$string[$key] = $value;
+			}
 		}
 
 		return implode('', $string);
@@ -4139,7 +4142,10 @@ class phunction_Unicode extends phunction
 	{
 		foreach (preg_grep('~\p{Ll}~u', $string = self::str_split($string)) as $key => $value)
 		{
-			$string[$key] = html_entity_decode('&#' . (self::ord($value) - 32) . ';', ENT_QUOTES, 'UTF-8');
+			if (preg_match('~^' . preg_quote($string[$key], '~') . '$~iu', $value = self::chr(self::ord($value) - 32)) > 0)
+			{
+				$string[$key] = $value;
+			}
 		}
 
 		return implode('', $string);
