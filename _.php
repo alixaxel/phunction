@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.7.19 (github.com/alixaxel/phunction/)
+* phunction 1.7.20 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -434,7 +434,12 @@ class phunction
 					header(sprintf('Status: %03u', $code), true, $code);
 				}
 
-				header('Location: ' . self::URL($url, $path, $query), true, (preg_match('~^30[1237]$~', $code) > 0) ? $code : 302);
+				if ((isset($path) === true) || (isset($query) === true))
+				{
+					$url = self::URL($url, $path, $query);
+				}
+
+				header('Location: ' . $url, true, (preg_match('~^30[1237]$~', $code) > 0) ? $code : 302);
 			}
 
 			exit();
