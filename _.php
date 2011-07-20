@@ -548,7 +548,7 @@ class phunction
 				{
 					if ($natural === true)
 					{
-						$value = preg_replace('~([0-9]+)~e', "sprintf('%032d', '$1')", $value);
+						$value = preg_replace('~([0-9]+)~e', 'sprintf("%032d", "$1")', $value);
 					}
 
 					if (strpos($value = htmlentities($value, ENT_QUOTES, 'UTF-8'), '&') !== false)
@@ -687,7 +687,7 @@ class phunction
 					}
 				}
 
-				return preg_replace('~(%[0-9a-f]{2})~e', "strtoupper('$1')", $result);
+				return preg_replace('~(%[0-9a-f]{2})~e', 'strtoupper("$1")', $result);
 			}
 
 			return false;
@@ -3959,6 +3959,23 @@ class phunction_Text extends phunction
 	public static function Slug($string, $slug = '-', $extra = null)
 	{
 		return strtolower(trim(preg_replace('~[^0-9a-z' . preg_quote($extra, '~') . ']+~i', $slug, self::Unaccent($string)), $slug));
+	}
+
+	public static function Title($string, $except = 'a(?:nd?|s|t)?|b(?:ut|y)|en|for|i[fn]|o[fnr]|t(?:he|o)|vs?[.]?|via')
+	{
+		$string = preg_split('~([-\s]+)~', $string, null, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+
+		foreach (preg_grep('~[&@0-9]|\p{L}\p{Lu}|[\p{L}\p{Nd}][.][\p{L}\p{Nd}]~u', $string, PREG_GREP_INVERT) as $key => $value)
+		{
+			$string[$key] = preg_replace('~\p{L&}~eu', 'stripslashes(strtoupper("$0"))', $value, 1);
+		}
+
+		if (strlen($string = implode('', $string)) > 1)
+		{
+			$string = preg_replace('~(?<!\A|["&.\'\p{Pi}\p{Ps}])\b(' . $except . ')(?:[.]|\b)(?!\Z|[!"&.?\'\p{Pe}\p{Pf}])~eiu', 'stripslashes(strtolower("$0"))', $string);
+		}
+
+		return preg_replace('~([!.:;?]\s+)\b(' . $except . ')\b~e', 'stripslashes("$1" . ucfirst("$2"))', $string);
 	}
 
 	public static function Truncate($string, $limit, $more = '...')
