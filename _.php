@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.7.20 (github.com/alixaxel/phunction/)
+* phunction 1.7.21 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1434,7 +1434,7 @@ class phunction_Disk extends phunction
 
 	public static function Tag($path = null, $tags = null, $fuzzy = true)
 	{
-		if (count($tags = array_filter(array_unique(array_map('phunction_Text::Slug', (array) $tags)), 'strlen')) > 0)
+		if (count($tags = array_filter(array_unique(array_map(array('phunction_Text', 'Slug'), (array) $tags)), 'strlen')) > 0)
 		{
 			$tags = implode('+', parent::Sort($tags, true));
 
@@ -2900,7 +2900,7 @@ class phunction_Net extends phunction
 
 						if (preg_match('~</?[a-z][^>]*>~i', $value) > 0)
 						{
-							$tags = array
+							$regex = array
 							(
 								'~<a[^>]+?href="([^"]+)"[^>]*>(.+?)</a>~is' => '$2 ($1)',
 								'~<p[^>]*>(.+?)</p>~is' => "\n\n$1\n\n",
@@ -2909,7 +2909,7 @@ class phunction_Net extends phunction
 								'~\n{3,}~' => "\n\n",
 							);
 
-							$value = strip_tags(preg_replace(array_keys($tags), $tags, $value));
+							$value = strip_tags(preg_replace(array_keys($regex), $regex, $value));
 						}
 
 						$value = implode("\n", array_map('imap_8bit', explode("\n", preg_replace('~\n{3,}~', "\n\n", trim($value)))));
@@ -3901,11 +3901,6 @@ class phunction_Text extends phunction
 		return false;
 	}
 
-	public static function Humanify($string)
-	{
-		return ph()->Unicode->ucwords(trim(str_replace('_', ' ', ph()->Unicode->strtolower($string))));
-	}
-
 	public static function Indent($string, $indent = 1)
 	{
 		if (strlen($indent = str_repeat("\t", intval($indent))) > 0)
@@ -3927,11 +3922,6 @@ class phunction_Text extends phunction
 		}
 
 		return $result;
-	}
-
-	public static function Namify($string)
-	{
-		return ph()->Unicode->ucwords(ph()->Unicode->strtolower(preg_replace('~\s*\b(\p{L}+)\b.+\b(\p{L}+)\b\s*~u', '$1 $2', $string)));
 	}
 
 	public static function Reduce($string, $search, $modifiers = false)
@@ -3965,17 +3955,23 @@ class phunction_Text extends phunction
 	{
 		$string = preg_split('~([-\s]+)~', $string, null, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 
-		foreach (preg_grep('~[&@0-9]|\p{L}\p{Lu}|[\p{L}\p{Nd}][.][\p{L}\p{Nd}]~u', $string, PREG_GREP_INVERT) as $key => $value)
+		foreach (preg_grep('~[&@0-9]|\p{L}\p{Lu}|[\p{L}\p{Nd}]{3,}[.][\p{L}\p{Nd}]{2,}]~u', $string, PREG_GREP_INVERT) as $key => $value)
 		{
-			$string[$key] = preg_replace('~\p{L&}~eu', 'stripslashes(strtoupper("$0"))', $value, 1);
+			$string[$key] = preg_replace('~\p{L&}~eu', 'stripslashes(phunction_Unicode::strtoupper("$0"))', $value, 1);
 		}
 
-		if (strlen($string = implode('', $string)) > 1)
+		if (strlen(implode('', $string)) > 0)
 		{
-			$string = preg_replace('~(?<!\A|["&.\'\p{Pi}\p{Ps}])\b(' . $except . ')(?:[.]|\b)(?!\Z|[!"&.?\'\p{Pe}\p{Pf}])~eiu', 'stripslashes(strtolower("$0"))', $string);
+			$regex = array
+			(
+				'~(?<!\A|["&.\'\p{Pi}\p{Ps}])\b(' . $except . ')(?:[.]|\b)(?!\Z|[!"&.?\'\p{Pe}\p{Pf}])~eiu' => 'stripslashes(phunction_Unicode::strtolower("$0"))',
+				'~([!.:;?]\s+)\b(' . $except . ')\b~eu' => 'stripslashes("$1" . phunction_Unicode::ucfirst("$2"))',
+			);
+
+			$string = preg_replace(array_keys($regex), $regex, implode('', $string));
 		}
 
-		return preg_replace('~([!.:;?]\s+)\b(' . $except . ')\b~e', 'stripslashes("$1" . ucfirst("$2"))', $string);
+		return $string;
 	}
 
 	public static function Truncate($string, $limit, $more = '...')
