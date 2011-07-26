@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.7.21 (github.com/alixaxel/phunction/)
+* phunction 1.7.26 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -3922,6 +3922,52 @@ class phunction_Text extends phunction
 		}
 
 		return $result;
+	}
+
+	public static function Name($string, $limit = true)
+	{
+		$regex = array
+		(
+			'~\s+~' => ' ',
+			'~\b([DO]\'|Ma?c)([^\b]+)\b~ei' => 'stripslashes("$1" . phunction_Unicode::ucfirst("$2"))',
+			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|$)~ei' => 'phunction_Unicode::strtoupper("$0")',
+			'~\b(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|ste?|v[ao]n|vel|vit)\b~ei' => 'phunction_Unicode::strtolower("$0")',
+		);
+
+		$string = preg_replace(array_keys($regex), $regex, self::Title(ph()->Unicode->strtolower(trim($string))));
+
+		if (is_int($limit) === true)
+		{
+			$string = explode(' ', $string);
+			$result = array(0 => array(), 1 => array());
+
+			foreach (range(1, $limit) as $i)
+			{
+				if ($i == ceil($limit / 2) + 1)
+				{
+					$string = array_reverse($string);
+				}
+
+				if (is_null($name = array_shift($string)) !== true)
+				{
+					$name = array($name);
+
+					if ($i != ceil($limit / 2))
+					{
+						while (preg_match('~^(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|ste?|v[ao]n|vel|vit)$~', current($string)) > 0)
+						{
+							$name = array_merge($name, (array) array_shift($string));
+						}
+					}
+
+					$result[($i > ceil($limit / 2))][] = implode(' ', ($i > ceil($limit / 2)) ? array_reverse($name) : $name);
+				}
+			}
+
+			$string = implode(' ', array_merge($result[0], array_reverse($result[1])));
+		}
+
+		return $string;
 	}
 
 	public static function Reduce($string, $search, $modifiers = false)
