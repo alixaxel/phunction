@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.7.26 (github.com/alixaxel/phunction/)
+* phunction 1.8.2 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -266,7 +266,7 @@ class phunction
 
 		else if (is_object($data) === true)
 		{
-			$result .= sprintf("%s = %s;\n", $name, preg_replace('~\n[[:space:]]*~', '', var_export($data, true)));
+			$result .= sprintf("%s = %s;\n", $name, preg_replace('~\n\s*~', '', var_export($data, true)));
 		}
 
 		else
@@ -3156,7 +3156,7 @@ class phunction_Net extends phunction
 								$data['openid.trust_root'] = parent::URL($realm, false, false);
 							}
 
-							parent::Redirect(parent::URL($server, null, $data));
+							parent::Redirect($server, null, $data);
 						}
 
 						return $server;
@@ -3929,12 +3929,11 @@ class phunction_Text extends phunction
 		$regex = array
 		(
 			'~\s+~' => ' ',
-			'~\b([DO]\'|Ma?c)([^\b]+)\b~ei' => 'stripslashes("$1" . phunction_Unicode::ucfirst("$2"))',
 			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|$)~ei' => 'phunction_Unicode::strtoupper("$0")',
-			'~\b(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|ste?|v[ao]n|vel|vit)\b~ei' => 'phunction_Unicode::strtolower("$0")',
+			'~\b(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|v[ao]n|vel|vit)\b~ei' => 'phunction_Unicode::strtolower("$0")',
 		);
 
-		$string = preg_replace(array_keys($regex), $regex, self::Title(ph()->Unicode->strtolower(trim($string))));
+		$string = preg_replace(array_keys($regex), $regex, ph()->Unicode->ucwords(ph()->Unicode->strtolower(trim($string)), "'-"));
 
 		if (is_int($limit) === true)
 		{
@@ -3954,7 +3953,7 @@ class phunction_Text extends phunction
 
 					if ($i != ceil($limit / 2))
 					{
-						while (preg_match('~^(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|ste?|v[ao]n|vel|vit)$~', current($string)) > 0)
+						while (preg_match(parent::Value(array_keys($regex), 2), current($string)) > 0)
 						{
 							$name = array_merge($name, (array) array_shift($string));
 						}
@@ -3997,9 +3996,14 @@ class phunction_Text extends phunction
 		return strtolower(trim(preg_replace('~[^0-9a-z' . preg_quote($extra, '~') . ']+~i', $slug, self::Unaccent($string)), $slug));
 	}
 
+	public static function Split($string, $regex = null)
+	{
+		return preg_split('~(' . $regex . ')~iu', $string, null, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+	}
+
 	public static function Title($string, $except = 'a(?:nd?|s|t)?|b(?:ut|y)|en|for|i[fn]|o[fnr]|t(?:he|o)|vs?[.]?|via')
 	{
-		$string = preg_split('~([-\s]+)~', $string, null, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+		$string = self::Split($string, '[-\s]+');
 
 		foreach (preg_grep('~[&@0-9]|\p{L}\p{Lu}|[\p{L}\p{Nd}]{3,}[.][\p{L}\p{Nd}]{2,}]~u', $string, PREG_GREP_INVERT) as $key => $value)
 		{
@@ -4062,14 +4066,9 @@ class phunction_Unicode extends phunction
 		return self::strtolower(self::substr($string, 0, 1)) . self::substr($string, 1);
 	}
 
-	public static function lcwords($string)
+	public static function lcwords($string, $search = null)
 	{
-		if (count($result = array_unique(self::str_word_count($string, 1))) > 0)
-		{
-			$string = str_replace($result, array_map('self::lcfirst', $result), $string);
-		}
-
-		return $string;
+		return implode('', array_map('self::lcfirst', ph()->Text->Split($string, '[\s.!?¡¿' . preg_quote($search, '~') . ']+')));
 	}
 
 	public static function ord($string)
@@ -4225,14 +4224,9 @@ class phunction_Unicode extends phunction
 		return self::strtoupper(self::substr($string, 0, 1)) . self::substr($string, 1);
 	}
 
-	public static function ucwords($string)
+	public static function ucwords($string, $search = null)
 	{
-		if (count($result = array_unique(self::str_word_count($string, 1))) > 0)
-		{
-			$string = str_replace($result, array_map('self::ucfirst', $result), $string);
-		}
-
-		return $string;
+		return implode('', array_map('self::ucfirst', ph()->Text->Split($string, '[\s.!?¡¿' . preg_quote($search, '~') . ']+')));
 	}
 }
 
