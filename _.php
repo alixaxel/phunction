@@ -3411,46 +3411,43 @@ class phunction_Net extends phunction
 					}
 				}
 
-				if (($result = self::CURL('http://api.uclassify.com/', $dom->saveXML(), 'POST', null, $headers)) !== false)
+				if (is_object($xml = self::XML(self::CURL('http://api.uclassify.com/', $dom->saveXML(), 'POST', null, $headers))) === true)
 				{
-					if ((is_object($xml = self::XML($result)) === true) && (strcmp('true', self::XML($xml, '//status/@success', 0)) === 0))
+					if ((in_array($method, array('classify', 'getInformation')) === true) && (strcmp('true', self::XML($xml, '//status/@success', 0)) === 0))
 					{
-						if (in_array($method, array('classify', 'getInformation')) === true)
+						$result = array();
+
+						if (strcmp('classify', $method) === 0)
 						{
-							$result = array();
-
-							if (strcmp('classify', $method) === 0)
+							foreach (self::XML($xml, '//classify/@id') as $id)
 							{
-								foreach (self::XML($xml, '//classify/@id') as $id)
+								$result[$id = strval($id)] = array();
+
+								foreach (self::XML($xml, sprintf('//classify[@id="%s"]//class', $id)) as $class)
 								{
-									$result[$id = strval($id)] = array();
-
-									foreach (self::XML($xml, sprintf('//classify[@id="%s"]//class', $id)) as $class)
-									{
-										$result[$id][strval($class['classname'])] = strval($class['p']);
-									}
-
-									arsort($result[$id]);
+									$result[$id][strval($class['classname'])] = strval($class['p']);
 								}
-							}
 
-							else if (strcmp('getInformation', $method) === 0)
-							{
-								foreach (self::XML($xml, '//classinformation') as $class)
-								{
-									$result[strval($class['classname'])] = array
-									(
-										'total' => intval($class->totalcount),
-										'unique' => intval($class->uniquefeatures),
-									);
-								}
+								arsort($result[$id]);
 							}
-
-							return $result;
 						}
 
-						return true;
+						else if (strcmp('getInformation', $method) === 0)
+						{
+							foreach (self::XML($xml, '//classinformation') as $class)
+							{
+								$result[strval($class['classname'])] = array
+								(
+									'total' => intval($class->totalcount),
+									'unique' => intval($class->uniquefeatures),
+								);
+							}
+						}
+
+						return $result;
 					}
+
+					return (strcmp('true', self::XML($xml, '//status/@success', 0)) === 0) ? true : false;
 				}
 			}
 		}
