@@ -3411,9 +3411,9 @@ class phunction_Net extends phunction
 					}
 				}
 
-				if (($result = ph()->Net->CURL('http://api.uclassify.com/', $dom->saveXML(), 'POST', null, $headers)) !== false)
+				if (($result = self::CURL('http://api.uclassify.com/', $dom->saveXML(), 'POST', null, $headers)) !== false)
 				{
-					if ((is_object($xml = ph()->Net->XML($result)) === true) && (strcmp('true', ph()->Net->XML($xml, '//status/@success', 0)) === 0))
+					if ((is_object($xml = self::XML($result)) === true) && (strcmp('true', self::XML($xml, '//status/@success', 0)) === 0))
 					{
 						if (in_array($method, array('classify', 'getInformation')) === true)
 						{
@@ -3421,11 +3421,11 @@ class phunction_Net extends phunction
 
 							if (strcmp('classify', $method) === 0)
 							{
-								foreach (ph()->Net->XML($xml, '//classify/@id') as $id)
+								foreach (self::XML($xml, '//classify/@id') as $id)
 								{
 									$result[$id = strval($id)] = array();
 
-									foreach (ph()->Net->XML($xml, sprintf('//classify[@id="%s"]//class', $id)) as $class)
+									foreach (self::XML($xml, sprintf('//classify[@id="%s"]//class', $id)) as $class)
 									{
 										$result[$id][strval($class['classname'])] = strval($class['p']);
 									}
@@ -3436,7 +3436,7 @@ class phunction_Net extends phunction
 
 							else if (strcmp('getInformation', $method) === 0)
 							{
-								foreach (ph()->Net->XML($xml, '//classinformation') as $class)
+								foreach (self::XML($xml, '//classinformation') as $class)
 								{
 									$result[strval($class['classname'])] = array
 									(
