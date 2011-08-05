@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.8.2 (github.com/alixaxel/phunction/)
+* phunction 1.8.4 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -3317,6 +3317,147 @@ class phunction_Net extends phunction
 		return sprintf('http://src.sencha.io/%s%s%s', ltrim($format . '/', '/'), ltrim(implode('/', array_slice(explode('*', $scale), 0, 2)) . '/', '/'), $image);
 	}
 
+	public static function uClassify($api, $data = null, $class = null, $username = null, $classifier = null, $method = 'classify')
+	{
+		$headers = array(CURLOPT_HTTPHEADER => array('Content-Type: text/xml'));
+
+		if ((extension_loaded('dom') === true) && (is_object($dom = new DOMDocument('1.0', 'UTF-8')) === true))
+		{
+			$dom->appendChild($root = $dom->createElementNS('http://api.uclassify.com/1/RequestSchema', 'uclassify'));
+
+			if (is_object($call = $dom->createElement(((preg_match('~^(?:classify|getInformation)$~', $method) > 0) ? 'read' : 'write') . 'Calls')) === true)
+			{
+				$tags = array
+				(
+					'uclassify' => array('version' => '1.01'),
+					'readCalls' => array('readApiKey' => $api),
+					'writeCalls' => array('writeApiKey' => $api, 'classifierName' => $classifier),
+				);
+
+				if (preg_match('~^(?:classify|(?:un)?train)$~', $method) > 0)
+				{
+					$root->appendChild($dom->createElement('texts'));
+
+					foreach (parent::Filter(array_map('base64_encode', (array) $data), false) as $id => $text)
+					{
+						if (is_object($node = $dom->createElement($method)) === true)
+						{
+							$attributes = array('id' => $id, 'textId' => $id);
+
+							if (preg_match('~^(?:un)?train$~', $method) > 0)
+							{
+								$attributes['className'] = $class;
+							}
+
+							else if (preg_match('~^classify$~', $method) > 0)
+							{
+								$attributes['username'] = $username;
+								$attributes['classifierName'] = $classifier;
+							}
+
+							foreach (array_filter($attributes, 'strlen') as $key => $value)
+							{
+								$node->setAttribute($key, $value);
+							}
+
+							$call->appendChild($node);
+						}
+
+						if (is_object($node = $dom->createElement('textBase64', $text)) === true)
+						{
+							$attributes = array('id' => $id);
+
+							foreach (array_filter($attributes, 'strlen') as $key => $value)
+							{
+								$node->setAttribute($key, $value);
+							}
+
+							$dom->getElementsByTagName('texts')->item(0)->appendChild($node);
+						}
+					}
+				}
+
+				else if (preg_match('~^(?:create|remove|(?:add|remove)Class|getInformation)$~', $method) > 0)
+				{
+					if (is_object($node = $dom->createElement($method)) === true)
+					{
+						$tags[$method] = array('id' => $method);
+
+						if (preg_match('~^(?:add|remove)Class$~', $method) > 0)
+						{
+							$tags[$method]['className'] = $class;
+						}
+
+						else if (preg_match('~^getInformation$~', $method) > 0)
+						{
+							$tags[$method]['username'] = $username;
+							$tags[$method]['classifierName'] = $classifier;
+						}
+
+						$call->appendChild($node);
+					}
+				}
+
+				$root->appendChild($call);
+
+				foreach ($tags as $tag => $attributes)
+				{
+					if (is_object($node = $dom->getElementsByTagName($tag)->item(0)) === true)
+					{
+						foreach (array_filter($attributes, 'strlen') as $key => $value)
+						{
+							$node->setAttribute($key, $value);
+						}
+					}
+				}
+
+				if (($result = ph()->Net->CURL('http://api.uclassify.com/', $dom->saveXML(), 'POST', null, $headers)) !== false)
+				{
+					if ((is_object($xml = ph()->Net->XML($result)) === true) && (strcmp('true', ph()->Net->XML($xml, '//status/@success', 0)) === 0))
+					{
+						if (in_array($method, array('classify', 'getInformation')) === true)
+						{
+							$result = array();
+
+							if (strcmp('classify', $method) === 0)
+							{
+								foreach (ph()->Net->XML($xml, '//classify/@id') as $id)
+								{
+									$result[$id = strval($id)] = array();
+
+									foreach (ph()->Net->XML($xml, sprintf('//classify[@id="%s"]//class', $id)) as $class)
+									{
+										$result[$id][strval($class['classname'])] = strval($class['p']);
+									}
+
+									arsort($result[$id]);
+								}
+							}
+
+							else if (strcmp('getInformation', $method) === 0)
+							{
+								foreach (ph()->Net->XML($xml, '//classinformation') as $class)
+								{
+									$result[strval($class['classname'])] = array
+									(
+										'total' => intval($class->totalcount),
+										'unique' => intval($class->uniquefeatures),
+									);
+								}
+							}
+
+							return $result;
+						}
+
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
 	public static function VIES($vatin, $country)
 	{
 		if ((preg_match('~[A-Z]{2}~', $country) > 0) && (preg_match('~[0-9A-Z.+*]{2,12}~', $vatin) > 0))
@@ -3408,7 +3549,7 @@ class phunction_Net_Akismet extends phunction_Net
 	{
 	}
 
-	public static function Check($key, $text, $name = null, $email = null, $domain = null, $type = null)
+	public static function Check($api, $text, $name = null, $email = null, $domain = null, $type = null)
 	{
 		$data = array
 		(
@@ -3424,7 +3565,7 @@ class phunction_Net_Akismet extends phunction_Net
 			'user_ip' => ph()->HTTP->IP(null, false),
 		);
 
-		if (($result = parent::CURL(sprintf('http://%s.rest.akismet.com/1.1/comment-check', $key), array_merge($data, preg_grep('~^HTTP_~', $_SERVER)), 'POST')) !== false)
+		if (($result = parent::CURL(sprintf('http://%s.rest.akismet.com/1.1/comment-check', $api), array_merge($data, preg_grep('~^HTTP_~', $_SERVER)), 'POST')) !== false)
 		{
 			return (strcmp('true', $result) === 0) ? true : false;
 		}
@@ -3432,7 +3573,7 @@ class phunction_Net_Akismet extends phunction_Net
 		return false;
 	}
 
-	public static function Submit($key, $text, $name = null, $email = null, $domain = null, $type = null, $endpoint = null)
+	public static function Submit($api, $text, $name = null, $email = null, $domain = null, $type = null, $endpoint = null)
 	{
 		if (in_array($endpoint, array('ham', 'spam')) === true)
 		{
@@ -3450,7 +3591,7 @@ class phunction_Net_Akismet extends phunction_Net
 				'user_ip' => ph()->HTTP->IP(null, false),
 			);
 
-			if (($result = parent::CURL(sprintf('http://%s.rest.akismet.com/1.1/submit-%s', $key, $endpoint), $data, 'POST')) !== false)
+			if (($result = parent::CURL(sprintf('http://%s.rest.akismet.com/1.1/submit-%s', $api, $endpoint), $data, 'POST')) !== false)
 			{
 				return true;
 			}
@@ -3459,15 +3600,15 @@ class phunction_Net_Akismet extends phunction_Net
 		return false;
 	}
 
-	public static function Verify($key)
+	public static function Verify($api)
 	{
 		$data = array
 		(
-			'key' => $key,
+			'key' => $api,
 			'blog' => parent::URL(null, false, false),
 		);
 
-		if (($result = parent::CURL(sprintf('http://%s.rest.akismet.com/1.1/verify-key', $key), $data, 'POST')) !== false)
+		if (($result = parent::CURL(sprintf('http://%s.rest.akismet.com/1.1/verify-key', $api), $data, 'POST')) !== false)
 		{
 			return (strcmp('valid', $result) === 0) ? true : false;
 		}
@@ -3595,12 +3736,12 @@ class phunction_Net_Google extends phunction_Net
 		return false;
 	}
 
-	public static function reCAPTCHA($key)
+	public static function reCAPTCHA($api)
 	{
 		$data = array
 		(
 			'challenge' => parent::Value($_POST, 'recaptcha_challenge_field'),
-			'privatekey' => $key,
+			'privatekey' => $api,
 			'remoteip' => ph()->HTTP->IP(),
 			'response' => trim(parent::Value($_POST, 'recaptcha_response_field')),
 		);
@@ -3929,8 +4070,9 @@ class phunction_Text extends phunction
 		$regex = array
 		(
 			'~\s+~' => ' ',
-			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|$)~ei' => 'phunction_Unicode::strtoupper("$0")',
+			'~\b([DO]\'|Fitz|Ma?c)([^\b]+)\b~ei' => 'stripslashes("$1" . phunction_Unicode::ucfirst("$2"))',
 			'~\b(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|v[ao]n|vel|vit)\b~ei' => 'phunction_Unicode::strtolower("$0")',
+			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|\Z)~ei' => 'phunction_Unicode::strtoupper("$0")',
 		);
 
 		$string = preg_replace(array_keys($regex), $regex, ph()->Unicode->ucwords(ph()->Unicode->strtolower(trim($string)), "'-"));
