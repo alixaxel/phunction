@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.8.4 (github.com/alixaxel/phunction/)
+* phunction 1.8.6 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -3425,7 +3425,7 @@ class phunction_Net extends phunction
 
 								foreach (self::XML($xml, sprintf('//classify[@id="%s"]//class', $id)) as $class)
 								{
-									$result[$id][strval($class['classname'])] = strval($class['p']);
+									$result[$id][strval($class['classname'])] = floatval($class['p']);
 								}
 
 								arsort($result[$id]);
@@ -3503,36 +3503,21 @@ class phunction_Net extends phunction
 
 	public static function XML($xml, $xpath = null, $key = null, $default = false)
 	{
-		if (extension_loaded('libxml') === true)
+		if ((extension_loaded('dom') === true) && (extension_loaded('SimpleXML') === true))
 		{
-			libxml_use_internal_errors(true);
-
-			if ((extension_loaded('dom') === true) && (extension_loaded('SimpleXML') === true))
+			if (is_object($xml) === true)
 			{
-				if (is_string($xml) === true)
+				if (isset($xpath) === true)
 				{
-					$dom = new DOMDocument();
-
-					if (@$dom->loadHTML($xml) === true)
-					{
-						return self::XML(@simplexml_import_dom($dom), $xpath, $key, $default);
-					}
+					$xml = $xml->xpath($xpath);
 				}
 
-				else if ((is_object($xml) === true) && (strcmp('SimpleXMLElement', get_class($xml)) === 0))
-				{
-					if (isset($xpath) === true)
-					{
-						$xml = $xml->xpath($xpath);
+				return (isset($key) === true) ? parent::Value($xml, $key, $default) : $xml;
+			}
 
-						if (isset($key) === true)
-						{
-							$xml = parent::Value($xml, $key, $default);
-						}
-					}
-
-					return $xml;
-				}
+			else if ((is_string($xml) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
+			{
+				return self::XML(@simplexml_import_dom(DOMDocument::loadHTML($xml)), $xpath, $key, $default);
 			}
 		}
 
