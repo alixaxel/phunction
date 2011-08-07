@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.8.6 (github.com/alixaxel/phunction/)
+* phunction 1.8.7 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1715,6 +1715,29 @@ class phunction_HTML extends phunction
 		return false;
 	}
 
+	public static function DOM($html, $xpath = null, $key = null, $default = false)
+	{
+		if ((extension_loaded('dom') === true) && (extension_loaded('SimpleXML') === true))
+		{
+			if (is_object($html) === true)
+			{
+				if (isset($xpath) === true)
+				{
+					$html = $html->xpath($xpath);
+				}
+
+				return (isset($key) === true) ? parent::Value($html, $key, $default) : $html;
+			}
+
+			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
+			{
+				return self::DOM(@simplexml_import_dom(DOMDocument::loadHTML($html)), $xpath, $key, $default);
+			}
+		}
+
+		return false;
+	}
+
 	public static function Obfuscate($string, $reverse = true)
 	{
 		if (ph()->Unicode->strlen($string) > 0)
@@ -2657,7 +2680,7 @@ class phunction_Net extends phunction
 			{
 				$result = self::CURL('http://services.sapo.pt/Captcha/Get/');
 
-				if (is_object($result = self::XML($result, '//captcha', 0)) === true)
+				if (is_object($result = ph()->HTML->DOM($result, '//captcha', 0)) === true)
 				{
 					$_SESSION[__METHOD__] = parent::Value($result, 'code');
 
@@ -2790,7 +2813,7 @@ class phunction_Net extends phunction
 		if ($result === false)
 		{
 			$result = array();
-			$currencies = self::XML(self::CURL('http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml'), '//cube/cube/cube');
+			$currencies = ph()->HTML->DOM(self::CURL('http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml'), '//cube/cube/cube');
 
 			if (is_array($currencies) === true)
 			{
@@ -3097,7 +3120,7 @@ class phunction_Net extends phunction
 			}
 		}
 
-		else if (($result = self::XML(self::CURL($id))) !== false)
+		else if (($result = ph()->HTML->DOM(self::CURL($id))) !== false)
 		{
 			$server = null;
 			$protocol = array
@@ -3112,11 +3135,11 @@ class phunction_Net extends phunction
 				{
 					if (is_array($namespace) === true)
 					{
-						$server = strval(self::XML($result, sprintf('//head/link[contains(@rel, "%s")]/@href', $namespace[0]), 0));
-						$delegate = strval(self::XML($result, sprintf('//head/link[contains(@rel, "%s")]/@href', $namespace[1]), 0, $id));
+						$server = strval(ph()->HTML->DOM($result, sprintf('//head/link[contains(@rel, "%s")]/@href', $namespace[0]), 0));
+						$delegate = strval(ph()->HTML->DOM($result, sprintf('//head/link[contains(@rel, "%s")]/@href', $namespace[1]), 0, $id));
 					}
 
-					else if (is_object($xml = self::XML($result, sprintf('//xrd/service[contains(type, "://%s")]', $namespace), 0)) === true)
+					else if (is_object($xml = ph()->HTML->DOM($result, sprintf('//xrd/service[contains(type, "://%s")]', $namespace), 0)) === true)
 					{
 						$server = parent::Value($xml, 'uri');
 
@@ -3411,19 +3434,19 @@ class phunction_Net extends phunction
 					}
 				}
 
-				if (is_object($xml = self::XML(self::CURL('http://api.uclassify.com/', $dom->saveXML(), 'POST', null, $headers))) === true)
+				if (is_object($xml = ph()->HTML->DOM(self::CURL('http://api.uclassify.com/', $dom->saveXML(), 'POST', null, $headers))) === true)
 				{
-					if ((in_array($method, array('classify', 'getInformation')) === true) && (strcmp('true', self::XML($xml, '//status/@success', 0)) === 0))
+					if ((in_array($method, array('classify', 'getInformation')) === true) && (strcmp('true', ph()->HTML->DOM($xml, '//status/@success', 0)) === 0))
 					{
 						$result = array();
 
 						if (strcmp('classify', $method) === 0)
 						{
-							foreach (self::XML($xml, '//classify/@id') as $id)
+							foreach (ph()->HTML->DOM($xml, '//classify/@id') as $id)
 							{
 								$result[$id = strval($id)] = array();
 
-								foreach (self::XML($xml, sprintf('//classify[@id="%s"]//class', $id)) as $class)
+								foreach (ph()->HTML->DOM($xml, sprintf('//classify[@id="%s"]//class', $id)) as $class)
 								{
 									$result[$id][strval($class['classname'])] = floatval($class['p']);
 								}
@@ -3434,7 +3457,7 @@ class phunction_Net extends phunction
 
 						else if (strcmp('getInformation', $method) === 0)
 						{
-							foreach (self::XML($xml, '//classinformation') as $class)
+							foreach (ph()->HTML->DOM($xml, '//classinformation') as $class)
 							{
 								$result[strval($class['classname'])] = array
 								(
@@ -3447,7 +3470,7 @@ class phunction_Net extends phunction
 						return $result;
 					}
 
-					return (strcmp('true', self::XML($xml, '//status/@success', 0)) === 0) ? true : false;
+					return (strcmp('true', ph()->HTML->DOM($xml, '//status/@success', 0)) === 0) ? true : false;
 				}
 			}
 		}
@@ -3495,29 +3518,6 @@ class phunction_Net extends phunction
 
 					return $result;
 				}
-			}
-		}
-
-		return false;
-	}
-
-	public static function XML($xml, $xpath = null, $key = null, $default = false)
-	{
-		if ((extension_loaded('dom') === true) && (extension_loaded('SimpleXML') === true))
-		{
-			if (is_object($xml) === true)
-			{
-				if (isset($xpath) === true)
-				{
-					$xml = $xml->xpath($xpath);
-				}
-
-				return (isset($key) === true) ? parent::Value($xml, $key, $default) : $xml;
-			}
-
-			else if ((is_string($xml) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
-			{
-				return self::XML(@simplexml_import_dom(DOMDocument::loadHTML($xml)), $xpath, $key, $default);
 			}
 		}
 
@@ -3790,14 +3790,14 @@ class phunction_Net_Google extends phunction_Net
 				{
 					if ((($result = fread($stream, 8192)) !== false) && (is_null($id) === true))
 					{
-						$result = parent::XML($result);
+						$result = ph()->HTML->DOM($result);
 
-						if (is_object(parent::XML($result, '//jid', 0)) === true)
+						if (is_object(ph()->HTML->DOM($result, '//jid', 0)) === true)
 						{
-							$id = strval(parent::XML($result, '//jid', 0));
+							$id = strval(ph()->HTML->DOM($result, '//jid', 0));
 						}
 
-						else if (is_object(parent::XML($result, '//proceed', 0)) === true)
+						else if (is_object(ph()->HTML->DOM($result, '//proceed', 0)) === true)
 						{
 							stream_socket_enable_crypto($stream, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
 						}
@@ -3830,13 +3830,13 @@ class phunction_Net_Google extends phunction_Net
 
 	public static function Weather($query)
 	{
-		$weather = parent::XML(parent::CURL('http://www.google.com/ig/api', array('weather' => $query)));
+		$weather = ph()->HTML->DOM(parent::CURL('http://www.google.com/ig/api', array('weather' => $query)));
 
 		if ($weather !== false)
 		{
 			$result = array();
 
-			foreach (parent::XML($weather, '//forecast_conditions') as $key => $value)
+			foreach (ph()->HTML->DOM($weather, '//forecast_conditions') as $key => $value)
 			{
 				$result[$key] = array(strval($value->low['data']), strval($value->high['data']));
 			}
