@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.8.7 (github.com/alixaxel/phunction/)
+* phunction 1.8.11 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1750,6 +1750,86 @@ class phunction_HTML extends phunction
 			}
 
 			return sprintf('<span style="unicode-bidi: bidi-override; direction: rtl;">&#%s;</span>', implode(';&#', array_reverse($string)));
+		}
+
+		return false;
+	}
+
+	public static function Purify($html, $whitelist = null, $protocols = 'http|https|mailto')
+	{
+		if (extension_loaded('dom') === true)
+		{
+			if (is_object($html) === true)
+			{
+				if (in_array($html->nodeName, array_keys($whitelist)) === true)
+				{
+					if ($html->hasAttributes() === true)
+					{
+						foreach (range($html->attributes->length - 1, 0) as $i)
+						{
+							$attribute = $html->attributes->item($i);
+
+							if (in_array($attribute->name, $whitelist[$html->nodeName]) !== true)
+							{
+								$html->removeAttributeNode($attribute);
+							}
+
+							else if (preg_match('~(?:action|background|cite|classid|codebase|data|href|icon|longdesc|manifest|poster|profile|src|usemap)$~i', $attribute->name) > 0)
+							{
+								$protocol = trim(ph()->Unicode->strstr($attribute->value, ':', true));
+
+								if ((strlen($protocol) > 0) && (in_array(strtolower($protocol), explode('|', strtolower($protocols))) !== true))
+								{
+									$html->removeAttributeNode($attribute);
+								}
+							}
+						}
+					}
+
+					if ($html->hasChildNodes() === true)
+					{
+						foreach (range($html->childNodes->length - 1, 0) as $i)
+						{
+							self::Purify($html->childNodes->item($i), $whitelist, $protocols);
+						}
+					}
+				}
+
+				else
+				{
+					$html->parentNode->removeChild($html);
+				}
+			}
+
+			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
+			{
+				if (is_object($html = @DOMDocument::loadHTML($html)) === true)
+				{
+					if (is_array($whitelist) !== true)
+					{
+						$whitelist = explode('|', $whitelist);
+					}
+
+					$whitelist = array_change_key_case(($whitelist === array_values($whitelist)) ? array_flip($whitelist) : $whitelist, CASE_LOWER);
+
+					foreach ($whitelist as $tag => $attributes)
+					{
+						if (is_array($attributes) !== true)
+						{
+							$attributes = explode('|', $attributes);
+						}
+
+						$whitelist[$tag] = preg_grep('~^(?:on|(?:1?|archive|content|style)$)~i', array_map('strtolower', $attributes), PREG_GREP_INVERT);
+					}
+
+					if (isset($html->documentElement) === true)
+					{
+						self::Purify($html->documentElement, array_merge(array_fill_keys(array('#text', 'html', 'body'), array()), $whitelist), $protocols);
+					}
+
+					return preg_replace('~<(?:!DOCTYPE|/?(?:html|body))[^>]*>\s*~i', '', $html->saveHTML());
+				}
+			}
 		}
 
 		return false;
@@ -4054,7 +4134,7 @@ class phunction_Text extends phunction
 			'~\s+~' => ' ',
 			'~\b([DO]\'|Fitz|Ma?c)([^\b]+)\b~ei' => 'stripslashes("$1" . phunction_Unicode::ucfirst("$2"))',
 			'~\b(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|v[ao]n|vel|vit)\b~ei' => 'phunction_Unicode::strtolower("$0")',
-			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|\Z)~ei' => 'phunction_Unicode::strtoupper("$0")',
+			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|$)~ei' => 'phunction_Unicode::strtoupper("$0")',
 		);
 
 		$string = preg_replace(array_keys($regex), $regex, ph()->Unicode->ucwords(ph()->Unicode->strtolower(trim($string)), "'-"));
@@ -4138,7 +4218,7 @@ class phunction_Text extends phunction
 		{
 			$regex = array
 			(
-				'~(?<!\A|["&.\'\p{Pi}\p{Ps}])\b(' . $except . ')(?:[.]|\b)(?!\Z|[!"&.?\'\p{Pe}\p{Pf}])~eiu' => 'stripslashes(phunction_Unicode::strtolower("$0"))',
+				'~(?<!^|["&.\'\p{Pi}\p{Ps}])\b(' . $except . ')(?:[.]|\b)(?!$|[!"&.?\'\p{Pe}\p{Pf}])~eiu' => 'stripslashes(phunction_Unicode::strtolower("$0"))',
 				'~([!.:;?]\s+)\b(' . $except . ')\b~eu' => 'stripslashes("$1" . phunction_Unicode::ucfirst("$2"))',
 			);
 
