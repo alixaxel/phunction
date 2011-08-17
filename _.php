@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.8.16 (github.com/alixaxel/phunction/)
+* phunction 1.8.17 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1715,6 +1715,19 @@ class phunction_HTML extends phunction
 		return false;
 	}
 
+	public static function Decode($string)
+	{
+		if (is_string($string) === true)
+		{
+			while (strcmp($string, html_entity_decode($string, ENT_QUOTES, 'UTF-8')) !== 0)
+			{
+				$string = html_entity_decode($string, ENT_QUOTES, 'UTF-8');
+			}
+		}
+
+		return $string;
+	}
+
 	public static function DOM($html, $xpath = null, $key = null, $default = false)
 	{
 		if ((extension_loaded('dom') === true) && (extension_loaded('SimpleXML') === true))
@@ -1740,26 +1753,9 @@ class phunction_HTML extends phunction
 
 	public static function Encode($string, $entities = false)
 	{
-		if (is_array($string) === true)
+		if (is_string($string) === true)
 		{
-			$result = array();
-
-			foreach ($string as $key => $value)
-			{
-				$result[self::Encode($key, $entities)] = self::Encode($value, $entities);
-			}
-
-			return $result;
-		}
-
-		else if (is_string($string) === true)
-		{
-			while (strcmp($string, html_entity_decode($string, ENT_QUOTES, 'UTF-8')) !== 0)
-			{
-				$string = html_entity_decode($string, ENT_QUOTES, 'UTF-8');
-			}
-
-			return call_user_func(($entities === true) ? 'htmlentities' : 'htmlspecialchars', $string, ENT_QUOTES, 'UTF-8');
+			$string = call_user_func(($entities === true) ? 'htmlentities' : 'htmlspecialchars', self::Decode($string), ENT_QUOTES, 'UTF-8');
 		}
 
 		return $string;
@@ -1801,9 +1797,9 @@ class phunction_HTML extends phunction
 								$html->removeAttributeNode($attribute);
 							}
 
-							else if (preg_match('~(?:action|background|cite|classid|codebase|data|href|icon|longdesc|manifest|poster|profile|src|usemap)$~i', $attribute->name) > 0)
+							else if (preg_match('~(?:action|background|cite|classid|codebase|data|href|icon|desc|manifest|poster|profile|src|usemap)$~i', $attribute->name) > 0)
 							{
-								$protocol = trim(ph()->Unicode->strstr($attribute->value, ':', true));
+								$protocol = trim(ph()->Text->Regex($attribute->value, '^([^/:]*):', array(1, 0)));
 
 								if ((strlen($protocol) > 0) && (in_array(strtolower($protocol), explode('|', strtolower($protocols))) !== true))
 								{
