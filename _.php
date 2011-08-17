@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.8.11 (github.com/alixaxel/phunction/)
+* phunction 1.8.16 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1738,6 +1738,33 @@ class phunction_HTML extends phunction
 		return false;
 	}
 
+	public static function Encode($string, $entities = false)
+	{
+		if (is_array($string) === true)
+		{
+			$result = array();
+
+			foreach ($string as $key => $value)
+			{
+				$result[self::Encode($key, $entities)] = self::Encode($value, $entities);
+			}
+
+			return $result;
+		}
+
+		else if (is_string($string) === true)
+		{
+			while (strcmp($string, html_entity_decode($string, ENT_QUOTES, 'UTF-8')) !== 0)
+			{
+				$string = html_entity_decode($string, ENT_QUOTES, 'UTF-8');
+			}
+
+			return call_user_func(($entities === true) ? 'htmlentities' : 'htmlspecialchars', $string, ENT_QUOTES, 'UTF-8');
+		}
+
+		return $string;
+	}
+
 	public static function Obfuscate($string, $reverse = true)
 	{
 		if (ph()->Unicode->strlen($string) > 0)
@@ -1837,7 +1864,7 @@ class phunction_HTML extends phunction
 
 	public static function Tag($tag, $content = null)
 	{
-		$tag = htmlspecialchars(strtolower(trim($tag)));
+		$tag = self::Encode(strtolower(trim($tag)));
 		$arguments = array_filter(array_slice(func_get_args(), 2), 'is_array');
 		$attributes = (empty($arguments) === true) ? array() : call_user_func_array('array_merge', $arguments);
 
@@ -1845,7 +1872,7 @@ class phunction_HTML extends phunction
 		{
 			foreach ($attributes as $key => $value)
 			{
-				$attributes[$key] = sprintf(' %s="%s"', htmlspecialchars($key), ($value === true) ? htmlspecialchars($key) : htmlspecialchars($value));
+				$attributes[$key] = sprintf(' %s="%s"', self::Encode($key), ($value === true) ? self::Encode($key) : self::Encode($value));
 			}
 		}
 
@@ -1854,7 +1881,7 @@ class phunction_HTML extends phunction
 			return sprintf('<%s%s />' . "\n", $tag, implode('', $attributes));
 		}
 
-		return sprintf('<%s%s>%s</%s>' . "\n", $tag, implode('', $attributes), htmlspecialchars($content), $tag);
+		return sprintf('<%s%s>%s</%s>' . "\n", $tag, implode('', $attributes), self::Encode($content), $tag);
 	}
 
 	public static function Title($string, $raw = true)
@@ -1865,23 +1892,6 @@ class phunction_HTML extends phunction
 		}
 
 		return false;
-	}
-
-	public static function XSS($string)
-	{
-		if (is_array($string) === true)
-		{
-			$result = array();
-
-			foreach ($string as $key => $value)
-			{
-				$result[self::XSS($key)] = self::XSS($value);
-			}
-
-			return $result;
-		}
-
-		return (is_string($string) === true) ? htmlspecialchars($string, ENT_QUOTES) : $string;
 	}
 }
 
@@ -3860,7 +3870,7 @@ class phunction_Net_Google extends phunction_Net
 				'<stream:stream to="gmail.com" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client">',
 				'<iq id="1" type="set" xmlns="jabber:client"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>' . __FUNCTION__ . '</resource></bind></iq>',
 				'<iq id="2" type="set" xmlns="jabber:client"><session xmlns="urn:ietf:params:xml:ns:xmpp-session" /></iq>',
-				'<message from="%s" to="' . htmlspecialchars($to) . '" type="chat"><body>' . htmlspecialchars($message) . '</body></message>',
+				'<message from="%s" to="' . ph()->HTML->Encode($to) . '" type="chat"><body>' . ph()->HTML->Encode($message) . '</body></message>',
 				'</stream:stream>',
 			);
 
