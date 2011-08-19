@@ -1799,7 +1799,7 @@ class phunction_HTML extends phunction
 
 							else if (preg_match('~(?:action|background|cite|classid|codebase|data|href|icon|desc|manifest|poster|profile|src|usemap)$~i', $attribute->name) > 0)
 							{
-								$protocol = trim(ph()->Text->Regex($attribute->value, '^([^/:]*):', array(1, 0)));
+								$protocol = trim(ph()->Text->Regex(self::Decode($attribute->value), '^([^/:]*):', array(1, 0)));
 
 								if ((strlen($protocol) > 0) && (in_array(strtolower($protocol), explode('|', strtolower($protocols))) !== true))
 								{
