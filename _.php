@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.8.17 (github.com/alixaxel/phunction/)
+* phunction 1.8.18 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1421,7 +1421,7 @@ class phunction_Disk extends phunction
 
 		if ((isset($unit) === true) && ($result > 0))
 		{
-			if (($unit = array_search($unit, array('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'), true)) === false)
+			if (($unit = array_search($unit, array('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'))) === false)
 			{
 				$unit = intval(log($result, 1024));
 			}
@@ -3426,7 +3426,17 @@ class phunction_Net extends phunction
 		return sprintf('http://src.sencha.io/%s%s%s', ltrim($format . '/', '/'), ltrim(implode('/', array_slice(explode('*', $scale), 0, 2)) . '/', '/'), $image);
 	}
 
-	public static function uClassify($api, $data = null, $class = null, $username = null, $classifier = null, $method = 'classify')
+	public static function Twitter($data, $endpoint = 'search')
+	{
+		if (($result = self::CURL(parent::URL('http://api.twitter.com/1/', trim($endpoint, '/') . '.json'), $data)) !== false)
+		{
+			return ((is_array($result = json_decode($result, true)) === true) && (array_key_exists('error', $result) !== true)) ? $result : false;
+		}
+
+		return false;
+	}
+
+	public static function uClassify($api, $data = null, $class = null, $username = null, $classifier = null, $endpoint = 'classify')
 	{
 		$headers = array(CURLOPT_HTTPHEADER => array('Content-Type: text/xml'));
 
@@ -3434,7 +3444,7 @@ class phunction_Net extends phunction
 		{
 			$dom->appendChild($root = $dom->createElementNS('http://api.uclassify.com/1/RequestSchema', 'uclassify'));
 
-			if (is_object($call = $dom->createElement(((preg_match('~^(?:classify|getInformation)$~', $method) > 0) ? 'read' : 'write') . 'Calls')) === true)
+			if (is_object($call = $dom->createElement(((preg_match('~^(?:classify|getInformation)$~', $endpoint) > 0) ? 'read' : 'write') . 'Calls')) === true)
 			{
 				$tags = array
 				(
@@ -3443,22 +3453,22 @@ class phunction_Net extends phunction
 					'writeCalls' => array('writeApiKey' => $api, 'classifierName' => $classifier),
 				);
 
-				if (preg_match('~^(?:classify|(?:un)?train)$~', $method) > 0)
+				if (preg_match('~^(?:classify|(?:un)?train)$~', $endpoint) > 0)
 				{
 					$root->appendChild($dom->createElement('texts'));
 
 					foreach (parent::Filter(array_map('base64_encode', (array) $data), false) as $id => $text)
 					{
-						if (is_object($node = $dom->createElement($method)) === true)
+						if (is_object($node = $dom->createElement($endpoint)) === true)
 						{
 							$attributes = array('id' => $id, 'textId' => $id);
 
-							if (preg_match('~^(?:un)?train$~', $method) > 0)
+							if (preg_match('~^(?:un)?train$~', $endpoint) > 0)
 							{
 								$attributes['className'] = $class;
 							}
 
-							else if (preg_match('~^classify$~', $method) > 0)
+							else if (preg_match('~^classify$~', $endpoint) > 0)
 							{
 								$attributes['username'] = $username;
 								$attributes['classifierName'] = $classifier;
@@ -3486,21 +3496,21 @@ class phunction_Net extends phunction
 					}
 				}
 
-				else if (preg_match('~^(?:create|remove|(?:add|remove)Class|getInformation)$~', $method) > 0)
+				else if (preg_match('~^(?:create|remove|(?:add|remove)Class|getInformation)$~', $endpoint) > 0)
 				{
-					if (is_object($node = $dom->createElement($method)) === true)
+					if (is_object($node = $dom->createElement($endpoint)) === true)
 					{
-						$tags[$method] = array('id' => $method);
+						$tags[$endpoint] = array('id' => $endpoint);
 
-						if (preg_match('~^(?:add|remove)Class$~', $method) > 0)
+						if (preg_match('~^(?:add|remove)Class$~', $endpoint) > 0)
 						{
-							$tags[$method]['className'] = $class;
+							$tags[$endpoint]['className'] = $class;
 						}
 
-						else if (preg_match('~^getInformation$~', $method) > 0)
+						else if (preg_match('~^getInformation$~', $endpoint) > 0)
 						{
-							$tags[$method]['username'] = $username;
-							$tags[$method]['classifierName'] = $classifier;
+							$tags[$endpoint]['username'] = $username;
+							$tags[$endpoint]['classifierName'] = $classifier;
 						}
 
 						$call->appendChild($node);
@@ -3522,11 +3532,11 @@ class phunction_Net extends phunction
 
 				if (is_object($xml = ph()->HTML->DOM(self::CURL('http://api.uclassify.com/', $dom->saveXML(), 'POST', null, $headers))) === true)
 				{
-					if ((in_array($method, array('classify', 'getInformation')) === true) && (strcmp('true', ph()->HTML->DOM($xml, '//status/@success', 0)) === 0))
+					if ((in_array($endpoint, array('classify', 'getInformation')) === true) && (strcmp('true', ph()->HTML->DOM($xml, '//status/@success', 0)) === 0))
 					{
 						$result = array();
 
-						if (strcmp('classify', $method) === 0)
+						if (strcmp('classify', $endpoint) === 0)
 						{
 							foreach (ph()->HTML->DOM($xml, '//classify/@id') as $id)
 							{
@@ -3541,7 +3551,7 @@ class phunction_Net extends phunction
 							}
 						}
 
-						else if (strcmp('getInformation', $method) === 0)
+						else if (strcmp('getInformation', $endpoint) === 0)
 						{
 							foreach (ph()->HTML->DOM($xml, '//classinformation') as $class)
 							{
