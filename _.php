@@ -2163,7 +2163,14 @@ class phunction_HTTP extends phunction
 
 	public static function Secure()
 	{
-		return (strcasecmp('off', parent::Value($_SERVER, 'HTTPS', 'off')) !== 0) ? true : false;
+		$result = parent::Value($_SERVER, 'HTTPS', 'off');
+
+		if ((empty($result) !== true) && (strcasecmp('off', $result) !== 0))
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	public static function Sleep($time = 1)
