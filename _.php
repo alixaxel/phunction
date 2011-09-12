@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.8.18 (github.com/alixaxel/phunction/)
+* phunction 1.9.12 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -2032,7 +2032,7 @@ class phunction_HTTP extends phunction
 		}
 	}
 
-	public static function Cookie($key, $value = null, $expire = null)
+	public static function Cookie($key, $value = null, $expire = null, $http = true)
 	{
 		if (isset($value) === true)
 		{
@@ -2041,7 +2041,7 @@ class phunction_HTTP extends phunction
 				$key = preg_replace('~[[](.*?)[]]~', '$1', sprintf('[%s]', implode('][', $key)), 1);
 			}
 
-			return (headers_sent() !== true) ? setcookie($key, strval($value), intval($expire), '/') : false;
+			return (headers_sent() !== true) ? setcookie($key, strval($value), intval($expire), '/', null, self::Secure(), $http) : false;
 		}
 
 		return parent::Value($_COOKIE, $key);
