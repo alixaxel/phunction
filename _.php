@@ -2500,6 +2500,18 @@ class phunction_Math extends phunction
 		return $result;
 	}
 
+	public static function Factorial($number)
+	{
+		$number = max(1, abs(intval($number)));
+
+		if (function_exists('gmp_fact') === true)
+		{
+			return gmp_strval(gmp_fact($number));
+		}
+
+		return (function_exists('bcmul') === true) ? array_reduce(range(1, $number), 'bcmul', 1) : array_product(range(1, $number));
+	}
+
 	public static function ifMB($id, $reference, $amount = 0.00, $entity = 10559)
 	{
 		$stack = 0;
@@ -3921,12 +3933,11 @@ class phunction_Net_Google extends phunction_Net
 			'langpair' => sprintf('%s|%s', $input, $output),
 			'q' => $query,
 			'v' => '1.0',
-			'userip' => $_SERVER['REMOTE_ADDR'],
 		);
 
-		$headers = array(CURLOPT_USERAGENT => $_SERVER['HTTP_USER_AGENT']);
+		$headers = array(CURLOPT_USERAGENT => parent::Value($_SERVER, 'HTTP_USER_AGENT'));
 
-		if (($result = parent::CURL('http://ajax.googleapis.com/ajax/services/language/translate', $data, 'GET', null, $headers, 8)) !== false)
+		if (($result = parent::CURL('http://ajax.googleapis.com/ajax/services/language/translate', $data 'GET', null, $headers)) !== false)
 		{
 			return parent::Value(json_decode($result, true), array('responseData', 'translatedText'));
 		}
