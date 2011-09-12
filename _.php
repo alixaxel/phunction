@@ -277,7 +277,7 @@ class phunction
 		return rtrim($result, "\n");
 	}
 
-	public static function Filter($data, $control = true)
+	public static function Filter($data, $control = true, $encoding = 'UTF-8')
 	{
 		if (is_array($data) === true)
 		{
@@ -285,7 +285,7 @@ class phunction
 
 			foreach ($data as $key => $value)
 			{
-				$result[self::Filter($key, $control)] = self::Filter($value, $control);
+				$result[self::Filter($key, $control, $encoding)] = self::Filter($value, $control, $encoding);
 			}
 
 			return $result;
@@ -293,7 +293,12 @@ class phunction
 
 		else if (is_string($data) === true)
 		{
-			$data = @iconv('UTF-8', 'UTF-8//IGNORE', $data);
+			if (extension_loaded('mbstring') === true)
+			{
+				$encoding = mb_detect_encoding($data, 'auto');
+			}
+
+			$data = @iconv($encoding, 'UTF-8//IGNORE', $data);
 
 			if ($control === true)
 			{
@@ -1719,10 +1724,7 @@ class phunction_HTML extends phunction
 	{
 		if (is_string($string) === true)
 		{
-			while (strcmp($string, html_entity_decode($string, ENT_QUOTES, 'UTF-8')) !== 0)
-			{
-				$string = html_entity_decode($string, ENT_QUOTES, 'UTF-8');
-			}
+			$string = html_entity_decode($string, ENT_QUOTES, 'UTF-8');
 		}
 
 		return $string;
