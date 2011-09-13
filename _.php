@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.9.12 (github.com/alixaxel/phunction/)
+* phunction 1.9.13 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -3939,7 +3939,7 @@ class phunction_Net_Google extends phunction_Net
 
 		$headers = array(CURLOPT_USERAGENT => parent::Value($_SERVER, 'HTTP_USER_AGENT'));
 
-		if (($result = parent::CURL('http://ajax.googleapis.com/ajax/services/language/translate', $data 'GET', null, $headers)) !== false)
+		if (($result = parent::CURL('http://ajax.googleapis.com/ajax/services/language/translate', $data, 'GET', null, $headers)) !== false)
 		{
 			return parent::Value(json_decode($result, true), array('responseData', 'translatedText'));
 		}
