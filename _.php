@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.9.13 (github.com/alixaxel/phunction/)
+* phunction 1.9.14 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -3815,6 +3815,18 @@ class phunction_Net_Google extends phunction_Net
 		);
 
 		return preg_replace('~^https?:~', '', parent::URL('http://maps.google.com/', '/maps/api/staticmap', $data));
+	}
+
+	public static function QR($query, $size = '500x500')
+	{
+		$data = array
+		(
+			'chl' => $query,
+			'chs' => $size,
+			'cht' => 'qr',
+		);
+
+		return preg_replace('~^https?:~', '', parent::URL('http://chart.googleapis.com/', '/chart', $data));
 	}
 
 	public static function Rank($url)
