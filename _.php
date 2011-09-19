@@ -2529,7 +2529,7 @@ class phunction_Math extends phunction
 			return implode('', array_reverse($string)) . abs(10 - ($result % 10));
 		}
 
-		else if (strcmp($string, GTIN(substr($string, 0, -1), true)) === 0)
+		else if (strcmp($string, self::GTIN(substr($string, 0, -1), true)) === 0)
 		{
 			return substr($string, 0, -1);
 		}
