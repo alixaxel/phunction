@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.9.14 (github.com/alixaxel/phunction/)
+* phunction 1.9.19 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -2396,7 +2396,7 @@ class phunction_Math extends phunction
 			return implode('', $string) . sprintf('%02u', (98 - $result * 10 % 97) % 97);
 		}
 
-		else if ($string == self::Checksum(substr($string, 0, -2), true))
+		else if (strcmp($string, self::Checksum(substr($string, 0, -2), true)) === 0)
 		{
 			return substr($string, 0, -2);
 		}
@@ -2514,6 +2514,29 @@ class phunction_Math extends phunction
 		return (function_exists('bcmul') === true) ? array_reduce(range(1, $number), 'bcmul', 1) : array_product(range(1, $number));
 	}
 
+	public static function GTIN($string, $encode = false)
+	{
+		if ($encode === true)
+		{
+			$result = 0;
+			$string = str_split(strrev($string), 1);
+
+			foreach ($string as $key => $value)
+			{
+				$result += ($key % 2 == 0) ? $value * 3 : $value;
+			}
+
+			return implode('', array_reverse($string)) . abs(10 - ($result % 10));
+		}
+
+		else if (strcmp($string, GTIN(substr($string, 0, -1), true)) === 0)
+		{
+			return substr($string, 0, -1);
+		}
+
+		return false;
+	}
+
 	public static function ifMB($id, $reference, $amount = 0.00, $entity = 10559)
 	{
 		$stack = 0;
@@ -2546,17 +2569,10 @@ class phunction_Math extends phunction
 
 				foreach ($string as $key => $value)
 				{
-					if ($key % 2 == 0)
-					{
-						$value = array_sum(str_split($value * 2, 1));
-					}
-
-					$result += $value;
+					$result += ($key % 2 == 0) ? array_sum(str_split($value * 2, 1)) : $value;
 				}
 
-				$result %= 10;
-
-				if ($result != 0)
+				if (($result %= 10) != 0)
 				{
 					$result -= 10;
 				}
@@ -2567,7 +2583,7 @@ class phunction_Math extends phunction
 			return $string;
 		}
 
-		else if ($string == self::Luhn(substr($string, 0, max(1, abs($encode)) * -1), max(1, abs($encode))))
+		else if (strcmp($string, self::Luhn(substr($string, 0, max(1, abs($encode)) * -1), max(1, abs($encode)))) === 0)
 		{
 			return substr($string, 0, max(1, abs($encode)) * -1);
 		}
@@ -2731,10 +2747,18 @@ class phunction_Math extends phunction
 	{
 		if ($encode > 0)
 		{
-			$d = array_chunk(str_split('0123456789123406789523401789563401289567401239567859876043216598710432765982104387659321049876543210', 1), 10);
-			$p = array_chunk(str_split('01234567891576283094580379614289160435279453126870428657390127938064157046913258', 1), 10);
-			$inv = str_split('0432156789', 1);
 			$encode += 1;
+			$lookup = array
+			(
+				'd' => '0123456789123406789523401789563401289567401239567859876043216598710432765982104387659321049876543210',
+				'p' => '01234567891576283094580379614289160435279453126870428657390127938064157046913258',
+				'i' => '0432156789',
+			);
+
+			foreach ($lookup as $key => $value)
+			{
+				$lookup[$key] = array_chunk(str_split($value, 1), 10);
+			}
 
 			while (--$encode > 0)
 			{
@@ -2743,16 +2767,16 @@ class phunction_Math extends phunction
 
 				foreach ($string as $key => $value)
 				{
-					$result = $d[$result][$p[($key + 1) % 8][$value]];
+					$result = $lookup['d'][$result][$lookup['p'][($key + 1) % 8][$value]];
 				}
 
-				$string = strrev(implode('', $string)) . $inv[$result];
+				$string = strrev(implode('', $string)) . $lookup['i'][0][$result];
 			}
 
 			return $string;
 		}
 
-		else if ($string == self::Verhoeff(substr($string, 0, max(1, abs($encode)) * -1), max(1, abs($encode))))
+		else if (strcmp($string, self::Verhoeff(substr($string, 0, max(1, abs($encode)) * -1), max(1, abs($encode)))) === 0)
 		{
 			return substr($string, 0, max(1, abs($encode)) * -1);
 		}
