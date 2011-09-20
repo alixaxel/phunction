@@ -613,16 +613,16 @@ class phunction
 		return ((isset($plural, $number) === true) && (abs($number) !== 1)) ? $plural : $single;
 	}
 
-	public static function Throttle($ttl = 60, $exit = 60, $count = 1, $proxy = false)
+	public static function Throttle($ttl = 60, $exit = 60, $count = 1, $proxy = false, $namespace = false)
 	{
 		if (extension_loaded('apc') === true)
 		{
 			$ip = ph()->HTTP->IP(null, $proxy);
-			$key = array(__METHOD__, $ip, $proxy);
+			$key = array(__METHOD__, $ip, $proxy, $namespace);
 
-			if (is_bool(apc_add(vsprintf('%s:%s:%b', $key), 0, $ttl)) === true)
+			if (is_bool(apc_add(vsprintf('%s:%s:%b:%s', $key), 0, $ttl)) === true)
 			{
-				$result = apc_inc(vsprintf('%s:%s:%b', $key), intval($count));
+				$result = apc_inc(vsprintf('%s:%s:%b:%s', $key), intval($count));
 
 				if ($result < $exit)
 				{
