@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.9.19 (github.com/alixaxel/phunction/)
+* phunction 1.9.20 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -431,7 +431,6 @@ class phunction
 		{
 			if (headers_sent() !== true)
 			{
-				session_regenerate_id(true);
 				session_write_close();
 
 				if (strncmp('cgi', PHP_SAPI, 3) === 0)
@@ -726,7 +725,7 @@ class phunction
 		return $data;
 	}
 
-	public static function View($path, $data = null, $minify = true, $return = false)
+	public static function View($path, $data = null, $minify = false, $return = false)
 	{
 		if (is_file($path . '.php') === true)
 		{
