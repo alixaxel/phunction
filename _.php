@@ -40,19 +40,19 @@ class phunction
 			set_magic_quotes_runtime(false);
 		}
 
-		foreach (array('_GET', '_PUT', '_POST', '_COOKIE', '_REQUEST') as $global)
+		foreach (array('_GET', '_PUT', '_POST', '_COOKIE', '_REQUEST') as $value)
 		{
-			$GLOBALS[$global] = self::Value($GLOBALS, $global, null);
+			$GLOBALS[$value] = self::Value($GLOBALS, $value, null);
 
-			if ((strcmp('_PUT', $global) === 0) && (strcasecmp('PUT', self::Value($_SERVER, 'REQUEST_METHOD')) === 0))
+			if ((strcmp('_PUT', $value) === 0) && (strcasecmp('PUT', self::Value($_SERVER, 'REQUEST_METHOD')) === 0))
 			{
-				if ((($GLOBALS[$global] = file_get_contents('php://input')) !== false) && (preg_match('~/x-www-form-urlencoded$~', self::Value($_SERVER, 'CONTENT_TYPE')) > 0))
+				if ((($GLOBALS[$value] = file_get_contents('php://input')) !== false) && (preg_match('~/x-www-form-urlencoded$~', self::Value($_SERVER, 'CONTENT_TYPE')) > 0))
 				{
-					parse_str($GLOBALS[$global], $GLOBALS[$global]);
+					parse_str($GLOBALS[$value], $GLOBALS[$value]);
 				}
 			}
 
-			$GLOBALS[$global] = self::Filter(self::Voodoo($GLOBALS[$global]), false);
+			$GLOBALS[$value] = self::Filter(self::Voodoo($GLOBALS[$value]), false);
 		}
 
 		array_map('ini_set', array('html_errors', 'display_errors', 'default_socket_timeout'), array(0, 1, 3));
@@ -1067,35 +1067,77 @@ class phunction_DB_SQL extends phunction_DB
 		return strval($result);
 	}
 
-	public function Insert($table, $data, $ignore = false)
+	public function Delete($table)
 	{
 		$this->sql = array();
 
 		if (is_object(phunction::DB()) === true)
 		{
-			$this->sql['query'] = 'INSERT ';
+			$this->sql['query'] = sprintf('DELETE FROM %s ', parent::Tick($table));
+		}
 
-			if ($ignore === true)
+		return $this;
+	}
+
+	public function Insert($table, $data, $replace = false)
+	{
+		$this->sql = array();
+
+		if (is_object(phunction::DB()) === true)
+		{
+			$this->sql['query'] = sprintf('INSERT INTO %s ', parent::Tick($table));
+
+			if (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0)
 			{
-				$this->sql['query'] .= 'IGNORE ';
+				$this->sql['query'] .= sprintf('(%s) VALUES (%s)', implode(', ', parent::Tick(array_keys($data))), implode(', ', $data));
 			}
 
-			$data = array_map(array(phunction::DB(), 'quote'), $data);
-			$this->sql['query'] .= sprintf('INTO %s ', parent::Tick($table));
+			$this->sql['query'] = ($replace === true) ? preg_replace('~^INSERT~', 'REPLACE', $this->sql['query'], 1) : $this->sql['query'];
+		}
 
-			if (strcmp('mysql', phunction::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
+		return $this;
+	}
+
+	public function Select($table, $data = '*', $distinct = false)
+	{
+		$this->sql = array();
+
+		if (is_object(phunction::DB()) === true)
+		{
+			$this->sql['query'] = 'SELECT ';
+
+			if ($distinct === true)
+			{
+				$this->sql['query'] .= 'DISTINCT ';
+			}
+
+			if (is_array($data) !== true)
+			{
+				$data = array_map('trim', explode(',', $data));
+			}
+
+			$this->sql['query'] .= sprintf('%s FROM %s', implode(', ', parent::Tick($data)), parent::Tick($table));
+		}
+
+		return $this;
+	}
+
+	public function Update($table, $data)
+	{
+		$this->sql = array();
+
+		if (is_object(phunction::DB()) === true)
+		{
+			$this->sql['query'] = sprintf('UPDATE %s ', parent::Tick($table));
+
+			if (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0)
 			{
 				foreach ($data as $key => $value)
 				{
 					$data[$key] = sprintf('%s = %s', parent::Tick($key), $value);
 				}
 
-				$this->sql['query'] .= 'SET ' . implode(', ', $data);
-			}
-
-			else
-			{
-				$this->sql['query'] .= sprintf('(%s) VALUES (%s)', implode(', ', parent::Tick(array_keys($data))), implode(', ', $data));
+				$this->sql['query'] .= sprintf('SET %s', implode(', ', $data));
 			}
 		}
 
@@ -2383,9 +2425,9 @@ class phunction_Is extends phunction
 
 	public static function URL($url = null, $path = null, $query = null)
 	{
-		foreach (array('path', 'query') as $key)
+		foreach (array('path', 'query') as $value)
 		{
-			$$key = (empty($$key) === true) ? 0 : constant(sprintf('FILTER_FLAG_%s_REQUIRED', $key));
+			$$value = (empty($$value) === true) ? 0 : constant(sprintf('FILTER_FLAG_%s_REQUIRED', $value));
 		}
 
 		return (filter_var($url, FILTER_VALIDATE_URL, $path + $query) !== false) ? true : false;
