@@ -1464,7 +1464,7 @@ class phunction_Disk extends phunction
 			
 			else
 			{
-				$path = parent::Value(array_filter(array_map('getenv', array('TMP', 'TMPDIR', 'TEMP')), 'strlen'), 0);
+				$path = parent::Value(array_filter(array_map('getenv', array('TMP', 'TEMP', 'TMPDIR')), 'strlen'), 0);
 			}
 		}
 		
@@ -1484,7 +1484,7 @@ class phunction_Disk extends phunction
 	public static function Upload($input, $output, $mime = null, $magic = null, $chmod = null)
 	{
 		$result = array();
-		$output = self::Path($output, true, $chmod);
+		$output = self::Path(strftime($output, time()), true, $chmod);
 
 		if ((is_dir($output) === true) && (array_key_exists($input, $_FILES) === true))
 		{
