@@ -927,6 +927,18 @@ class phunction_DB extends phunction
 	{
 	}
 
+	public function __get($key)
+	{
+		$class = __CLASS__ . '_' . $key;
+
+		if (class_exists($class, false) === true)
+		{
+			return $this->$key = new $class();
+		}
+
+		return false;
+	}
+
 	public static function Get($table, $id = null)
 	{
 		if (is_object(parent::DB()) === true)
@@ -1009,6 +1021,19 @@ class phunction_DB extends phunction
 		}
 
 		return false;
+	}
+}
+
+class phunction_DB_SQL extends phunction_DB
+{
+	public $sql = array();
+	
+	public function __construct()
+	{
+	}
+	
+	public function __toString()
+	{
 	}
 }
 
