@@ -1059,6 +1059,11 @@ class phunction_DB_SQL extends phunction_DB
 
 			if (preg_match('~^(?:SELECT|UPDATE|DELETE)\b~i', $result) > 0)
 			{
+				if (array_key_exists('where', $this->sql) === true)
+				{
+					$result .= "\n\t" . implode("\n\t", $this->sql['where']);
+				}
+
 				if (array_key_exists('order', $this->sql) === true)
 				{
 					$result .= "\n" . $this->sql['order'];
@@ -1111,11 +1116,11 @@ class phunction_DB_SQL extends phunction_DB
 	{
 		if (array_key_exists('query', $this->sql) === true)
 		{
-			$this->sql['limit'] = 'LIMIT ' . intval($limit);
+			$this->sql['limit'] = sprintf('LIMIT %u', $limit);
 
 			if (isset($offset) === true)
 			{
-				$this->sql['limit'] .= ' OFFSET ' . intval($offset);
+				$this->sql['limit'] .= sprintf(' OFFSET %u', $offset);
 			}
 		}
 
@@ -1177,6 +1182,22 @@ class phunction_DB_SQL extends phunction_DB
 				}
 
 				$this->sql['query'] .= sprintf('SET %s', implode(', ', $data));
+			}
+		}
+
+		return $this;
+	}
+
+	public function Where($data, $operator = 'LIKE', $merge = 'AND')
+	{
+		if (array_key_exists('query', $this->sql) === true)
+		{
+			if (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0)
+			{
+				foreach ($data as $key => $value)
+				{
+					$this->sql['where'][] = sprintf('%s %s %s %s', (empty($this->sql['where']) === true) ? 'WHERE' : $merge, parent::Tick($key), $operator, $value);
+				}
 			}
 		}
 
