@@ -1057,11 +1057,24 @@ class phunction_DB_SQL extends phunction_DB
 		{
 			$result = rtrim($this->sql['query']);
 
-			if (preg_match('~^(?:SELECT|UPDATE|DELETE)\b~i', $result) > 0)
+			if (preg_match('~^(?:SELECT|UPDATE|DELETE)\b~', $result) > 0)
 			{
 				if (array_key_exists('where', $this->sql) === true)
 				{
 					$result .= "\n\t" . implode("\n\t", $this->sql['where']);
+				}
+
+				if (strpos($result, 'SELECT') === 0)
+				{
+					if (array_key_exists('group', $this->sql) === true)
+					{
+						$result .= "\n" . $this->sql['group'];
+					}
+
+					if (array_key_exists('having', $this->sql) === true)
+					{
+						$result .= "\n\t" . implode("\n\t", $this->sql['having']);
+					}
 				}
 
 				if (array_key_exists('order', $this->sql) === true)
@@ -1093,6 +1106,37 @@ class phunction_DB_SQL extends phunction_DB
 		return $this;
 	}
 
+	public function Group($data, $order = 'ASC')
+	{
+		if (array_key_exists('query', $this->sql) === true)
+		{
+			if (is_array($data) !== true)
+			{
+				$data = array_map('trim', explode(',', $data));
+			}
+
+			$this->sql['group'] = sprintf('GROUP BY %s %s', implode(', ', parent::Tick($data)), strtoupper(trim($order)));
+		}
+
+		return $this;
+	}
+
+	public function Having($data, $operator = 'LIKE', $merge = 'AND')
+	{
+		if (array_key_exists('query', $this->sql) === true)
+		{
+			if (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0)
+			{
+				foreach ($data as $key => $value)
+				{
+					$this->sql['having'][] = sprintf('%s %s %s %s', (empty($this->sql['having']) === true) ? 'HAVING' : $merge, parent::Tick($key), $operator, $value);
+				}
+			}
+		}
+
+		return $this;
+	}
+
 	public function Insert($table, $data, $replace = false)
 	{
 		$this->sql = array();
@@ -1106,7 +1150,7 @@ class phunction_DB_SQL extends phunction_DB
 				$this->sql['query'] .= sprintf('(%s) VALUES (%s)', implode(', ', parent::Tick(array_keys($data))), implode(', ', $data));
 			}
 
-			$this->sql['query'] = ($replace === true) ? preg_replace('~(INSERT)~', 'REPLACE', $this->sql['query'], 1) : $this->sql['query'];
+			$this->sql['query'] = ($replace === true) ? preg_replace('~INSERT~', 'REPLACE', $this->sql['query'], 1) : $this->sql['query'];
 		}
 
 		return $this;
@@ -1127,16 +1171,16 @@ class phunction_DB_SQL extends phunction_DB
 		return $this;
 	}
 
-	public function Order($field, $order = 'ASC')
+	public function Order($data, $order = 'ASC')
 	{
 		if (array_key_exists('query', $this->sql) === true)
 		{
-			if (is_array($field) !== true)
+			if (is_array($data) !== true)
 			{
-				$field = array_map('trim', explode(',', $field));
+				$data = array_map('trim', explode(',', $data));
 			}
 
-			$this->sql['order'] = sprintf('ORDER BY %s %s', implode(', ', parent::Tick($field)), strtoupper(trim($order)));
+			$this->sql['order'] = sprintf('ORDER BY %s %s', implode(', ', parent::Tick($data)), strtoupper(trim($order)));
 		}
 
 		return $this;
