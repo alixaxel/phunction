@@ -1022,6 +1022,23 @@ class phunction_DB extends phunction
 
 		return false;
 	}
+
+	public static function Tick($data)
+	{
+		$data = str_replace(array('`', '"'), '', $data);
+		
+		if (is_object(parent::DB()) === true)
+		{
+			if (strcmp('mysql', parent::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
+			{
+				return str_ireplace(' `AS` ', ' AS ', preg_replace('~\b(\w+)\b(?!\()~', '`$1`', $data));
+			}
+			
+			return str_ireplace(' "AS" ', ' AS ', preg_replace('~\b(\w+)\b(?!\()~', '"$1"', $data));
+		}
+		
+		return $data;
+	}
 }
 
 class phunction_DB_SQL extends phunction_DB
@@ -1034,6 +1051,30 @@ class phunction_DB_SQL extends phunction_DB
 	
 	public function __toString()
 	{
+	}
+	
+	public function Insert($table, $data, $ignore = false)
+	{
+		$this->sql = array();
+
+		if (is_object(parent::DB()) === true)
+		{
+			$this->sql['query'] = 'INSERT ';
+
+			if ($ignore === true)
+			{
+				$this->sql['query'] .= 'IGNORE ';
+			}
+
+			foreach ($data as $key => $value)
+			{
+				$data[$key] = parent::Tick($key) . ' = ' . parent::DB()->quote($value);
+			}
+
+			$this->sql['query'] .= 'INTO ' . parent::Tick($table) . ' SET ' . implode(', ', $data);
+		}
+
+		return $this;
 	}
 }
 
