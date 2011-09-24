@@ -1026,17 +1026,17 @@ class phunction_DB extends phunction
 	public static function Tick($data)
 	{
 		$data = str_replace(array('`', '"'), '', $data);
-		
+
 		if (is_object(parent::DB()) === true)
 		{
 			if (strcmp('mysql', parent::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
 			{
 				return str_ireplace(' `AS` ', ' AS ', preg_replace('~\b(\w+)\b(?!\()~', '`$1`', $data));
 			}
-			
+
 			return str_ireplace(' "AS" ', ' AS ', preg_replace('~\b(\w+)\b(?!\()~', '"$1"', $data));
 		}
-		
+
 		return $data;
 	}
 }
@@ -1044,20 +1044,34 @@ class phunction_DB extends phunction
 class phunction_DB_SQL extends phunction_DB
 {
 	public $sql = array();
-	
+
 	public function __construct()
 	{
 	}
-	
+
 	public function __toString()
 	{
+		$result = null;
+
+		if (array_key_exists('query', $this->sql) === true)
+		{
+			$result = rtrim($this->sql['query']);
+
+			if (preg_match('~^(?:SELECT|UPDATE|DELETE)\b~i', $result) > 0)
+			{
+			}
+
+			$result .= ';';
+		}
+
+		return strval($result);
 	}
-	
+
 	public function Insert($table, $data, $ignore = false)
 	{
 		$this->sql = array();
 
-		if (is_object(parent::DB()) === true)
+		if (is_object(phunction::DB()) === true)
 		{
 			$this->sql['query'] = 'INSERT ';
 
@@ -1066,12 +1080,23 @@ class phunction_DB_SQL extends phunction_DB
 				$this->sql['query'] .= 'IGNORE ';
 			}
 
-			foreach ($data as $key => $value)
+			$data = array_map(array(phunction::DB(), 'quote'), $data);
+			$this->sql['query'] .= sprintf('INTO %s ', parent::Tick($table));
+
+			if (strcmp('mysql', phunction::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
 			{
-				$data[$key] = parent::Tick($key) . ' = ' . parent::DB()->quote($value);
+				foreach ($data as $key => $value)
+				{
+					$data[$key] = sprintf('%s = %s', parent::Tick($key), $value);
+				}
+
+				$this->sql['query'] .= 'SET ' . implode(', ', $data);
 			}
 
-			$this->sql['query'] .= 'INTO ' . parent::Tick($table) . ' SET ' . implode(', ', $data);
+			else
+			{
+				$this->sql['query'] .= sprintf('(%s) VALUES (%s)', implode(', ', parent::Tick(array_keys($data))), implode(', ', $data));
+			}
 		}
 
 		return $this;
@@ -1439,7 +1464,7 @@ class phunction_Disk extends phunction
 	public static function Path($path, $mkdir = false, $chmod = null)
 	{
 		$path = strftime($path, time());
-		
+
 		if (($mkdir === true) && (file_exists($path) !== true))
 		{
 			if (is_null($chmod) === true)
@@ -1520,32 +1545,29 @@ class phunction_Disk extends phunction
 
 		return false;
 	}
-	
+
 	public static function Temp($id, $path = null, $chmod = null)
 	{
 		if (empty($path) === true)
 		{
+			$path = parent::Value(array_filter(array_map('getenv', array('TMP', 'TEMP', 'TMPDIR')), 'strlen'), 0);
+
 			if (function_exists('sys_get_temp_dir') === true)
 			{
 				$path = sys_get_temp_dir();
 			}
-			
-			else
-			{
-				$path = parent::Value(array_filter(array_map('getenv', array('TMP', 'TEMP', 'TMPDIR')), 'strlen'), 0);
-			}
 		}
-		
+
 		if (is_writable($path) === true)
 		{
 			if (($result = tempnam(self::Path($path), $id)) !== false)
 			{
 				self::Chmod($result, $chmod);
 			}
-			
+
 			return $result;
 		}
-		
+
 		return false;
 	}
 
