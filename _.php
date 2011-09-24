@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.9.20 (github.com/alixaxel/phunction/)
+* phunction 1.9.23 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1450,6 +1450,34 @@ class phunction_Disk extends phunction
 			return sprintf('+%s+', $tags);
 		}
 
+		return false;
+	}
+	
+	public static function Temp($id, $path = null, $chmod = null)
+	{
+		if (empty($path) === true)
+		{
+			if (function_exists('sys_get_temp_dir') === true)
+			{
+				$path = sys_get_temp_dir();
+			}
+			
+			else
+			{
+				$path = parent::Value(array_filter(array_map('getenv', array('TMP', 'TMPDIR', 'TEMP')), 'strlen'), 0);
+			}
+		}
+		
+		if (is_writable($path) === true)
+		{
+			if (($result = tempnam(self::Path($path), $id)) !== false)
+			{
+				self::Chmod($result, $chmod);
+			}
+			
+			return $result;
+		}
+		
 		return false;
 	}
 
