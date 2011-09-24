@@ -1397,6 +1397,8 @@ class phunction_Disk extends phunction
 
 	public static function Path($path, $mkdir = false, $chmod = null)
 	{
+		$path = strftime($path, time());
+		
 		if (($mkdir === true) && (file_exists($path) !== true))
 		{
 			if (is_null($chmod) === true)
@@ -1509,7 +1511,7 @@ class phunction_Disk extends phunction
 	public static function Upload($input, $output, $mime = null, $magic = null, $chmod = null)
 	{
 		$result = array();
-		$output = self::Path(strftime($output, time()), true, $chmod);
+		$output = self::Path($output, true, $chmod);
 
 		if ((is_dir($output) === true) && (array_key_exists($input, $_FILES) === true))
 		{
