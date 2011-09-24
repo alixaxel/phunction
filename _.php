@@ -1059,6 +1059,15 @@ class phunction_DB_SQL extends phunction_DB
 
 			if (preg_match('~^(?:SELECT|UPDATE|DELETE)\b~i', $result) > 0)
 			{
+				if (array_key_exists('order', $this->sql) === true)
+				{
+					$result .= "\n" . $this->sql['order'];
+				}
+
+				if (array_key_exists('limit', $this->sql) === true)
+				{
+					$result .= "\n" . $this->sql['limit'];
+				}
 			}
 
 			$result .= ';';
@@ -1092,7 +1101,37 @@ class phunction_DB_SQL extends phunction_DB
 				$this->sql['query'] .= sprintf('(%s) VALUES (%s)', implode(', ', parent::Tick(array_keys($data))), implode(', ', $data));
 			}
 
-			$this->sql['query'] = ($replace === true) ? preg_replace('~^INSERT~', 'REPLACE', $this->sql['query'], 1) : $this->sql['query'];
+			$this->sql['query'] = ($replace === true) ? preg_replace('~(INSERT)~', 'REPLACE', $this->sql['query'], 1) : $this->sql['query'];
+		}
+
+		return $this;
+	}
+
+	public function Limit($limit, $offset = null)
+	{
+		if (array_key_exists('query', $this->sql) === true)
+		{
+			$this->sql['limit'] = 'LIMIT ' . intval($limit);
+
+			if (isset($offset) === true)
+			{
+				$this->sql['limit'] .= ' OFFSET ' . intval($offset);
+			}
+		}
+
+		return $this;
+	}
+
+	public function Order($field, $order = 'ASC')
+	{
+		if (array_key_exists('query', $this->sql) === true)
+		{
+			if (is_array($field) !== true)
+			{
+				$field = array_map('trim', explode(',', $field));
+			}
+
+			$this->sql['order'] = sprintf('ORDER BY %s %s', implode(', ', parent::Tick($field)), strtoupper(trim($order)));
 		}
 
 		return $this;
