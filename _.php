@@ -1059,6 +1059,14 @@ class phunction_DB_SQL extends phunction_DB
 
 			if (preg_match('~^(?:SELECT|UPDATE|DELETE)\b~', $result) > 0)
 			{
+				if (strpos($result, 'SELECT') === 0)
+				{
+					if (array_key_exists('join', $this->sql) === true)
+					{
+						$result .= "\n\t" . implode("\n\t", $this->sql['join']);
+					}
+				}
+
 				if (array_key_exists('where', $this->sql) === true)
 				{
 					$result .= "\n\t" . implode("\n\t", $this->sql['where']);
@@ -1115,7 +1123,7 @@ class phunction_DB_SQL extends phunction_DB
 				$data = array_map('trim', explode(',', $data));
 			}
 
-			$this->sql['group'] = sprintf('GROUP BY %s %s', implode(', ', parent::Tick($data)), strtoupper(trim($order)));
+			$this->sql['group'] = sprintf('GROUP BY %s %s', implode(', ', parent::Tick($data)), $order);
 		}
 
 		return $this;
@@ -1156,6 +1164,47 @@ class phunction_DB_SQL extends phunction_DB
 		return $this;
 	}
 
+	public function Join($table, $data = null, $type = null, $operator = '=', $merge = 'AND')
+	{
+		if (array_key_exists('query', $this->sql) === true)
+		{
+			if (is_array($table) !== true)
+			{
+				$table = array_map('trim', explode(',', $table));
+			}
+
+			if (isset($data) === true)
+			{
+				if (is_array($data) !== true)
+				{
+					$data = array_map('trim', explode(',', $data));
+				}
+
+				if ($data === array_values($data))
+				{
+					$this->sql['join'][] = ltrim(sprintf('%s JOIN %s USING(%s)', $type, implode(', ', parent::Tick($table)), implode(', ', parent::Tick($data))));
+				}
+
+				else
+				{
+					foreach ($data as $key => $value)
+					{
+						$data[$key] = sprintf('%s %s %s', parent::Tick($key), $operator, parent::Tick($value));
+					}
+
+					$this->sql['join'][] = ltrim(sprintf('%s JOIN %s ON (%s)', $type, implode(', ', parent::Tick($table)), implode(sprintf(' %s ', $merge), $data)));
+				}
+			}
+
+			else
+			{
+				$this->sql['join'][] = sprintf('%s JOIN %s', rtrim(sprintf('NATURAL %s', $type)), implode(', ', parent::Tick($table)));
+			}
+		}
+
+		return $this;
+	}
+
 	public function Limit($limit, $offset = null)
 	{
 		if (array_key_exists('query', $this->sql) === true)
@@ -1180,7 +1229,7 @@ class phunction_DB_SQL extends phunction_DB
 				$data = array_map('trim', explode(',', $data));
 			}
 
-			$this->sql['order'] = sprintf('ORDER BY %s %s', implode(', ', parent::Tick($data)), strtoupper(trim($order)));
+			$this->sql['order'] = sprintf('ORDER BY %s %s', implode(', ', parent::Tick($data)), $order);
 		}
 
 		return $this;
