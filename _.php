@@ -141,7 +141,7 @@ class phunction
 				date_modify($result, $argument);
 			}
 
-			return date_format($result, str_replace(array('DATETIME', 'DATE', 'TIME', 'YEAR'), array('DATE TIME', 'Y-m-d', 'H:i:s', 'Y'), $format));
+			return date_format($result, str_replace(explode('DATE|TIME|YEAR|ZONE'), explode('Y-m-d|H:i:s|Y|T'), $format));
 		}
 
 		return false;
@@ -1642,7 +1642,7 @@ class phunction_Disk extends phunction
 
 		$ip = implode(' -> ', array_unique(ph()->HTTP->IP(null, true), ph()->HTTP->IP(null, false)));
 
-		if (self::File($path, sprintf('[%s] @ %s: %s', $ip, parent::Date('DATETIME'), trim($log)) . "\n", true) === true)
+		if (self::File($path, sprintf('[%s] @ %s: %s', $ip, parent::Date('DATE TIME'), trim($log)) . "\n", true) === true)
 		{
 			if (($debug === true) && (ob_start() === true))
 			{
