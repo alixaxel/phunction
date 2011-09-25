@@ -141,7 +141,7 @@ class phunction
 				date_modify($result, $argument);
 			}
 
-			return date_format($result, str_replace(explode('DATE|TIME|YEAR|ZONE'), explode('Y-m-d|H:i:s|Y|T'), $format));
+			return date_format($result, str_replace(explode('|', 'DATE|TIME|YEAR|ZONE'), explode('|', 'Y-m-d|H:i:s|Y|T'), $format));
 		}
 
 		return false;
