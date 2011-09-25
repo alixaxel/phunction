@@ -1154,16 +1154,11 @@ class phunction_DB_SQL extends phunction_DB
 		{
 			if (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0)
 			{
+				$merge = array($merge, 'HAVING');
+
 				foreach ($data as $key => $value)
 				{
-					$type = $merge;
-
-					if (empty($this->sql['having']) === true)
-					{
-						$type = 'HAVING';
-					}
-
-					$this->sql['having'][] = sprintf('%s %s %s %s', $type, parent::Tick($key), $operator, $value);
+					$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['having'])], parent::Tick($key), $operator, $value);
 				}
 			}
 		}
@@ -1342,16 +1337,11 @@ class phunction_DB_SQL extends phunction_DB
 		{
 			if (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0)
 			{
+				$merge = array($merge, 'WHERE');
+
 				foreach ($data as $key => $value)
 				{
-					$type = $merge;
-
-					if (empty($this->sql['where']) === true)
-					{
-						$type = 'WHERE';
-					}
-
-					$this->sql['where'][] = sprintf('%s %s %s %s', $type, parent::Tick($key), $operator, $value);
+					$this->sql['where'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], parent::Tick($key), $operator, $value);
 				}
 			}
 		}
