@@ -827,7 +827,7 @@ class phunction_Date extends phunction
 			{
 				if (($date = parent::Date('DATE', $date, true, '+1 day')) !== false)
 				{
-					$result[parent::Date('W', $date, true)][parent::Date('DATE', $date, true)] = parent::Value($events, parent::Date('DATE', $date, true), null);
+					$result[parent::Date('W', $date, true)][$date] = parent::Value($events, $date, null);
 				}
 			}
 		}
