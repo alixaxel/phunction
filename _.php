@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.9.25 (github.com/alixaxel/phunction/)
+* phunction 1.9.26 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -130,15 +130,26 @@ class phunction
 		return null;
 	}
 
-	public static function Date($format = 'U', $time = 'now')
+	public static function Date($format = 'U', $time = 'now', $zone = null)
 	{
-		$result = date_create($time, timezone_open(date_default_timezone_get()));
-
-		if (is_object($result) === true)
+		if (is_object($result = date_create($time)) === true)
 		{
-			foreach (array_filter(array_slice(func_get_args(), 2), 'strtotime') as $argument)
+			if (isset($zone) === true)
 			{
-				date_modify($result, $argument);
+				if (is_string($zone) !== true)
+				{
+					$zone = date_default_timezone_get();
+				}
+
+				@date_timezone_set($result, timezone_open($zone));
+			}
+
+			if (count($arguments = array_slice(func_get_args(), 3)) > 0)
+			{
+				foreach (array_filter($arguments, 'strtotime') as $argument)
+				{
+					date_modify($result, $argument);
+				}
 			}
 
 			return date_format($result, str_replace(explode('|', 'DATE|TIME|YEAR|ZONE'), explode('|', 'Y-m-d|H:i:s|Y|T'), $format));
@@ -778,9 +789,9 @@ class phunction_Date extends phunction
 
 	public static function Age($date = 'now')
 	{
-		if (($date = parent::Date('Ymd', $date)) !== false)
+		if (($date = parent::Date('Ymd', $date, true)) !== false)
 		{
-			return intval(substr(parent::Date('Ymd') - $date, 0, -4));
+			return intval(substr(parent::Date('Ymd', 'now', true) - $date, 0, -4));
 		}
 
 		return false;
@@ -788,11 +799,11 @@ class phunction_Date extends phunction
 
 	public static function Birthday($date = 'now')
 	{
-		if (($date = parent::Date('U', $date, sprintf('+%u years', self::Age($date)))) !== false)
+		if (($date = parent::Date('U', $date, true, sprintf('+%u years', self::Age($date)))) !== false)
 		{
-			if (($date -= parent::Date('U', 'today')) < 0)
+			if (($date -= parent::Date('U', 'today', true)) < 0)
 			{
-				$date = parent::Date('U', '@' . $date, '+1 year');
+				$date = parent::Date('U', '@' . $date, true, '+1 year');
 			}
 
 			return round($date / 86400);
@@ -805,18 +816,18 @@ class phunction_Date extends phunction
 	{
 		$result = array();
 
-		if (($date = parent::Date('Ym01', $date)) !== false)
+		if (($date = parent::Date('Ym01', $date, true)) !== false)
 		{
 			if (empty($result) === true)
 			{
-				$date = parent::Date('Ymd', $date, 'this week', '-1 day');
+				$date = parent::Date('Ymd', $date, true, 'this week', '-1 day');
 			}
 
 			while (count($result, COUNT_RECURSIVE) < 48)
 			{
-				if (($date = parent::Date('DATE', $date, '+1 day')) !== false)
+				if (($date = parent::Date('DATE', $date, true, '+1 day')) !== false)
 				{
-					$result[parent::Date('W', $date)][parent::Date('DATE', $date)] = parent::Value($events, parent::Date('DATE', $date), null);
+					$result[parent::Date('W', $date, true)][parent::Date('DATE', $date, true)] = parent::Value($events, parent::Date('DATE', $date, true), null);
 				}
 			}
 		}
@@ -826,7 +837,7 @@ class phunction_Date extends phunction
 
 	public static function Frequency($date = 'now')
 	{
-		if (($date = parent::Date('U', $date)) !== false)
+		if (($date = parent::Date('U', $date, true)) !== false)
 		{
 			if (($date = abs($_SERVER['REQUEST_TIME'] - $date)) != 0)
 			{
@@ -857,7 +868,7 @@ class phunction_Date extends phunction
 
 	public static function Relative($date = 'now')
 	{
-		if (($date = parent::Date('U', $date)) !== false)
+		if (($date = parent::Date('U', $date, true)) !== false)
 		{
 			if (($date = $_SERVER['REQUEST_TIME'] - $date) != 0)
 			{
@@ -889,7 +900,7 @@ class phunction_Date extends phunction
 
 	public static function Zodiac($date = 'now')
 	{
-		if (($date = parent::Date('md', $date)) !== false)
+		if (($date = parent::Date('md', $date, true)) !== false)
 		{
 			$zodiac = array
 			(
@@ -3321,11 +3332,11 @@ class phunction_Net extends phunction
 
 				if (is_null($ttl) === true)
 				{
-					$ttl = parent::Date('U', '6 PM') - $_SERVER['REQUEST_TIME'];
+					$ttl = parent::Date('U', '6 PM', true) - $_SERVER['REQUEST_TIME'];
 
 					if ($ttl < 0)
 					{
-						$ttl = parent::Date('U', '@' . $ttl, '+1 day');
+						$ttl = parent::Date('U', '@' . $ttl, true, '+1 day');
 					}
 
 					$ttl = round(max(3600, $ttl / 2));
