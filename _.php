@@ -499,10 +499,10 @@ class phunction
 
 			if (is_null($result) === true)
 			{
-				$result = rtrim(preg_replace('~/+~', '/', substr(self::Value($_SERVER, 'PHP_SELF'), strlen(self::Value($_SERVER, 'SCRIPT_NAME')))), '/');
+				$result = preg_replace('~/+~', '/', substr(self::Value($_SERVER, 'PHP_SELF'), strlen(self::Value($_SERVER, 'SCRIPT_NAME'))));
 			}
 
-			if (preg_match('~' . rtrim(str_replace(array(':all:', ':any:', ':num:'), array('(?:/.*)?', '[^/]+', '[0-9]+'), $route), '/') . '$~i', $result, $matches) > 0)
+			if (preg_match('~^' . rtrim(str_replace(array(':any:', ':num:'), array('[^/]+', '[0-9]+'), $route), '/') . '~i', $result, $matches) > 0)
 			{
 				if (empty($callback) !== true)
 				{
@@ -532,7 +532,10 @@ class phunction
 
 		if (is_null($result) === true)
 		{
-			$result = array_values(array_filter(explode('/', substr(self::Value($_SERVER, 'PHP_SELF'), strlen(self::Value($_SERVER, 'SCRIPT_NAME')))), 'strlen'));
+			if (count($result = explode('/', substr(self::Value($_SERVER, 'PHP_SELF'), strlen(self::Value($_SERVER, 'SCRIPT_NAME'))))) > 0)
+			{
+				$result = array_values(array_filter($result, 'strlen'));
+			}
 		}
 
 		return (isset($key) === true) ? self::Value($result, (is_int($key) === true) ? $key : (array_search($key, $result) + 1), $default) : $result;
