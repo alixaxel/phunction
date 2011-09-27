@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.9.26 (github.com/alixaxel/phunction/)
+* phunction 1.9.27 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -350,7 +350,7 @@ class phunction
 
 	public static function Highway($path, $throttle = null)
 	{
-		if ((is_dir($path = ph()->Disk->Path($path)) === true) && (count($segments = self::Segment(null)) > 0))
+		if ((is_dir($path = ph()->Disk->Path($path)) === true) && (count($segments = self::Segment()) > 0))
 		{
 			$class = null;
 
@@ -359,7 +359,7 @@ class phunction
 				$class .= $segment . '/';
 			}
 
-			if (count($class = array_filter(glob($path . $class . '{,_}' . $segment . '.php', GLOB_BRACE), 'is_file')) > 0)
+			if (count($class = glob($path . $class . '{,_}' . $segment . '.php', GLOB_BRACE)) > 0)
 			{
 				$class = preg_replace('~[.]php$~', '', current($class));
 				$method = (count($segments) > 0) ? array_shift($segments) : self::Value($_SERVER, 'REQUEST_METHOD', 'GET');
@@ -375,10 +375,10 @@ class phunction
 				}
 			}
 
-			throw new Exception('/' . implode('/', self::Segment(null)), 404);
+			throw new Exception('/' . implode('/', self::Segment()), 404);
 		}
 
-		return false;
+		return true;
 	}
 
 	public static function Mongo($query = null)
