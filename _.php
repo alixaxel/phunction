@@ -55,6 +55,11 @@ class phunction
 			$GLOBALS[$value] = self::Filter(self::Voodoo($GLOBALS[$value]), false);
 		}
 
+		if (defined('ROOT') !== true)
+		{
+			define('ROOT', realpath(dirname(self::Value($_SERVER, 'SCRIPT_FILENAME', __FILE__))));
+		}
+
 		array_map('ini_set', array('html_errors', 'display_errors', 'default_socket_timeout'), array(0, 1, 3));
 	}
 
@@ -316,7 +321,7 @@ class phunction
 				return preg_replace('~\p{C}+~u', '', $data);
 			}
 
-			return preg_replace(array('~\r[\n]?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $data);
+			return preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $data);
 		}
 
 		return $data;
