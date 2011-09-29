@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.9.27 (github.com/alixaxel/phunction/)
+* phunction 1.9.29 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -499,10 +499,10 @@ class phunction
 
 			if (is_null($result) === true)
 			{
-				$result = preg_replace('~/+~', '/', substr(self::Value($_SERVER, 'PHP_SELF'), strlen(self::Value($_SERVER, 'SCRIPT_NAME'))));
+				$result = preg_replace('~/+~', '/', substr(self::Value($_SERVER, 'PHP_SELF'), strlen(self::Value($_SERVER, 'SCRIPT_NAME'))) . '/');
 			}
 
-			if (preg_match('~^' . rtrim(str_replace(array(':any:', ':num:'), array('[^/]+', '[0-9]+'), $route), '/') . '~i', $result, $matches) > 0)
+			if (preg_match('~^' . str_replace(array(':any:', ':num:'), array('[^/]+', '[0-9]+'), $route) . '~i', $result, $matches) > 0)
 			{
 				if (empty($callback) !== true)
 				{
