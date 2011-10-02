@@ -746,7 +746,7 @@ class phunction
 
 	public static function View($path, $data = null, $minify = false, $return = false)
 	{
-		if (is_file($path . '.php') === true)
+		if (is_file(($path = str_replace('::', '/', $path)) . '.php') === true)
 		{
 			extract((array) $data);
 
@@ -1169,28 +1169,25 @@ class phunction_DB_SQL extends phunction_DB
 
 	public function Having($data, $operator = 'LIKE', $merge = 'AND')
 	{
-		if (array_key_exists('query', $this->sql) === true)
+		if ((array_key_exists('query', $this->sql) === true) && (count($data) > 0))
 		{
-			if (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0)
+			$merge = array($merge, 'HAVING');
+
+			foreach ($data as $key => $value)
 			{
-				$merge = array($merge, 'HAVING');
+				$key = parent::Tick($key);
 
-				foreach ($data as $key => $value)
+				if (preg_match('~(?:NOT\s+)?IN\b~i', $operator) > 0)
 				{
-					$key = parent::Tick($key);
-
-					if (preg_match('~(?:NOT\s+)?IN\b~i', $operator) > 0)
-					{
-						$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
-					}
-
-					else if (preg_match('~(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
-					{
-						$value = vsprintf('%s AND %s', array_map(array(phunction::DB(), 'quote'), array(array_shift($value), array_shift($value))));
-					}
-
-					$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['having'])], $key, $operator, $value);
+					$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
 				}
+
+				else if (preg_match('~(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
+				{
+					$value = vsprintf('%s AND %s', array_map(array(phunction::DB(), 'quote'), array(array_shift($value), array_shift($value))));
+				}
+
+				$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['having'])], $key, $operator, $value);
 			}
 		}
 
@@ -1364,28 +1361,25 @@ class phunction_DB_SQL extends phunction_DB
 
 	public function Where($data, $operator = 'LIKE', $merge = 'AND')
 	{
-		if (array_key_exists('query', $this->sql) === true)
+		if ((array_key_exists('query', $this->sql) === true) && (count($data) > 0))
 		{
-			if (count($data) > 0)
+			$merge = array($merge, 'WHERE');
+
+			foreach ($data as $key => $value)
 			{
-				$merge = array($merge, 'WHERE');
+				$key = parent::Tick($key);
 
-				foreach ($data as $key => $value)
+				if (preg_match('~(?:NOT\s+)?IN\b~i', $operator) > 0)
 				{
-					$key = parent::Tick($key);
-
-					if (preg_match('~(?:NOT\s+)?IN\b~i', $operator) > 0)
-					{
-						$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
-					}
-
-					else if (preg_match('~(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
-					{
-						$value = vsprintf('%s AND %s', array_map(array(phunction::DB(), 'quote'), array(array_shift($value), array_shift($value))));
-					}
-
-					$this->sql['where'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], $key, $operator, $value);
+					$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
 				}
+
+				else if (preg_match('~(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
+				{
+					$value = vsprintf('%s AND %s', array_map(array(phunction::DB(), 'quote'), array(array_shift($value), array_shift($value))));
+				}
+
+				$this->sql['where'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], $key, $operator, $value);
 			}
 		}
 
