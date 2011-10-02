@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.9.29 (github.com/alixaxel/phunction/)
+* phunction 1.10.2 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1177,7 +1177,19 @@ class phunction_DB_SQL extends phunction_DB
 
 				foreach ($data as $key => $value)
 				{
-					$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['having'])], parent::Tick($key), $operator, $value);
+					$key = parent::Tick($key);
+
+					if (preg_match('~(?:NOT\s+)?IN\b~i', $operator) > 0)
+					{
+						$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
+					}
+
+					else if (preg_match('~(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
+					{
+						$value = vsprintf('%s AND %s', array_map(array(phunction::DB(), 'quote'), array(array_shift($value), array_shift($value))));
+					}
+
+					$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['having'])], $key, $operator, $value);
 				}
 			}
 		}
@@ -1354,13 +1366,25 @@ class phunction_DB_SQL extends phunction_DB
 	{
 		if (array_key_exists('query', $this->sql) === true)
 		{
-			if (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0)
+			if (count($data) > 0)
 			{
 				$merge = array($merge, 'WHERE');
 
 				foreach ($data as $key => $value)
 				{
-					$this->sql['where'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], parent::Tick($key), $operator, $value);
+					$key = parent::Tick($key);
+
+					if (preg_match('~(?:NOT\s+)?IN\b~i', $operator) > 0)
+					{
+						$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
+					}
+
+					else if (preg_match('~(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
+					{
+						$value = vsprintf('%s AND %s', array_map(array(phunction::DB(), 'quote'), array(array_shift($value), array_shift($value))));
+					}
+
+					$this->sql['where'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], $key, $operator, $value);
 				}
 			}
 		}
