@@ -1179,7 +1179,7 @@ class phunction_DB_SQL extends phunction_DB
 
 				if (preg_match('~(?:NOT\s+)?IN\b~i', $operator) > 0)
 				{
-					$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
+					$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), (array) $value)));
 				}
 
 				else if (preg_match('~(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
@@ -1371,7 +1371,7 @@ class phunction_DB_SQL extends phunction_DB
 
 				if (preg_match('~(?:NOT\s+)?IN\b~i', $operator) > 0)
 				{
-					$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
+					$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), (array) $value)));
 				}
 
 				else if (preg_match('~(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
