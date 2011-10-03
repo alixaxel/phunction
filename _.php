@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.10.2 (github.com/alixaxel/phunction/)
+* phunction 1.10.3 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -364,7 +364,7 @@ class phunction
 				$class .= $segment . '/';
 			}
 
-			if (count($class = glob($path . $class . '{,_}' . $segment . '.php', GLOB_BRACE)) > 0)
+			if ((is_array($class = glob($path . $class . '{,_}' . $segment . '.php', GLOB_BRACE)) === true) && (count($class) > 0))
 			{
 				$class = preg_replace('~[.]php$~', '', current($class));
 				$method = (count($segments) > 0) ? array_shift($segments) : self::Value($_SERVER, 'REQUEST_METHOD', 'GET');
