@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.10.3 (github.com/alixaxel/phunction/)
+* phunction 1.10.6 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -3299,10 +3299,14 @@ class phunction_Net extends phunction
 				curl_setopt($curl, CURLOPT_URL, $url);
 				curl_setopt($curl, CURLOPT_FAILONERROR, true);
 				curl_setopt($curl, CURLOPT_AUTOREFERER, true);
-				curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 				curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 				curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
 				curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+
+				if (max(ini_get('safe_mode'), strlen(ini_get('open_basedir'))) == 0)
+				{
+					curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+				}
 
 				if (preg_match('~^(?:DELETE|GET|HEAD|OPTIONS|POST|PUT)$~i', $method) > 0)
 				{
