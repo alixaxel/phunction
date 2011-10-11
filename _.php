@@ -1044,16 +1044,16 @@ class phunction_DB extends phunction
 
 	public static function Tick($data)
 	{
-		$data = str_replace(array('`', '"'), '', $data);
-
 		if (is_object(parent::DB()) === true)
 		{
+			$data = preg_replace('~[`"]+~', '', $data);
+
 			if (strcmp('mysql', parent::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
 			{
-				return str_ireplace(' `AS` ', ' AS ', preg_replace('~\b(\w+)\b(?!\()~', '`$1`', $data));
+				return str_ireplace(' `AS` ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '`$1`', $data));
 			}
 
-			return str_ireplace(' "AS" ', ' AS ', preg_replace('~\b(\w+)\b(?!\()~', '"$1"', $data));
+			return str_ireplace(' "AS" ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '"$1"', $data));
 		}
 
 		return $data;
@@ -1064,8 +1064,12 @@ class phunction_DB_SQL extends phunction_DB
 {
 	public $sql = array();
 
-	public function __construct()
+	public function __construct($sql = null)
 	{
+		if (isset($sql) === true)
+		{
+			$this->sql['sql'] = trim($sql);
+		}
 	}
 
 	public function __toString()
@@ -1116,6 +1120,11 @@ class phunction_DB_SQL extends phunction_DB
 			}
 
 			$result .= ';';
+		}
+
+		else if (array_key_exists('sql', $this->sql) === true)
+		{
+			$result = sprintf('%s;', rtrim($this->sql['sql'], ';'));
 		}
 
 		return strval($result);
