@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.10.6 (github.com/alixaxel/phunction/)
+* phunction 1.10.11 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1177,25 +1177,22 @@ class phunction_DB_SQL extends phunction_DB
 			{
 				$key = parent::Tick($key);
 
-				if (is_array($value) === true)
+				if (is_object($value) === true)
 				{
-					if (preg_match('~\b(?:NOT\s+)?IN\b~i', $operator) > 0)
-					{
-						$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
-					}
-
-					else if (preg_match('~\b(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
-					{
-						$value = vsprintf('%s AND %s', array_map(array(phunction::DB(), 'quote'), array(array_shift($value), array_shift($value))));
-					}
-
-					$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['having'])], $key, $operator, $value);
+					$value = sprintf('(%s)', rtrim(strval($value), ';'));
 				}
 
-				else
+				else if (is_array($value = array_map(array(phunction::DB(), 'quote'), (array) $value)) === true)
 				{
-					$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['having'])], $key, $operator, phunction::DB()->quote($value));
+					if (preg_match('~\b(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
+					{
+						$value = sprintf('%s AND %s', array_shift($value), array_shift($value));
+					}
+
+					$value = (preg_match('~\b(?:NOT\s+)?IN\b~i', $operator) > 0) ? sprintf('(%s)', implode(', ', $value)) : array_shift($value);
 				}
+
+				$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], $key, $operator, $value);
 			}
 		}
 
@@ -1377,25 +1374,22 @@ class phunction_DB_SQL extends phunction_DB
 			{
 				$key = parent::Tick($key);
 
-				if (is_array($value) === true)
+				if (is_object($value) === true)
 				{
-					if (preg_match('~\b(?:NOT\s+)?IN\b~i', $operator) > 0)
-					{
-						$value = sprintf('(%s)', implode(', ', array_map(array(phunction::DB(), 'quote'), $value)));
-					}
-
-					else if (preg_match('~\b(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
-					{
-						$value = vsprintf('%s AND %s', array_map(array(phunction::DB(), 'quote'), array(array_shift($value), array_shift($value))));
-					}
-
-					$this->sql['where'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], $key, $operator, $value);
+					$value = sprintf('(%s)', rtrim(strval($value), ';'));
 				}
 
-				else
+				else if (is_array($value = array_map(array(phunction::DB(), 'quote'), (array) $value)) === true)
 				{
-					$this->sql['where'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], $key, $operator, phunction::DB()->quote($value));
+					if (preg_match('~\b(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
+					{
+						$value = sprintf('%s AND %s', array_shift($value), array_shift($value));
+					}
+
+					$value = (preg_match('~\b(?:NOT\s+)?IN\b~i', $operator) > 0) ? sprintf('(%s)', implode(', ', $value)) : array_shift($value);
 				}
+
+				$this->sql['where'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], $key, $operator, $value);
 			}
 		}
 
