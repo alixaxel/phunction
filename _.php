@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.10.11 (github.com/alixaxel/phunction/)
+* phunction 1.10.12 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -1078,7 +1078,7 @@ class phunction_DB_SQL extends phunction_DB
 
 		if (array_key_exists('query', $this->sql) === true)
 		{
-			$result = $this->sql['query'];
+			$result .= $this->sql['query'];
 
 			if (preg_match('~^(?:SELECT|UPDATE|DELETE)\b~', $result) > 0)
 			{
@@ -1119,12 +1119,17 @@ class phunction_DB_SQL extends phunction_DB
 				}
 			}
 
+			if (array_key_exists('explain', $this->sql) === true)
+			{
+				$result = $this->sql['explain'] . "\n" . $result;
+			}
+
 			$result .= ';';
 		}
 
 		else if (array_key_exists('sql', $this->sql) === true)
 		{
-			$result = sprintf('%s;', rtrim($this->sql['sql'], ';'));
+			$result .= sprintf('%s;', rtrim($this->sql['sql'], ';'));
 		}
 
 		return strval($result);
@@ -1145,6 +1150,16 @@ class phunction_DB_SQL extends phunction_DB
 			{
 				$this->sql['query'] = sprintf('DELETE FROM %s', implode(', ', $table));
 			}
+		}
+
+		return $this;
+	}
+
+	public function Explain()
+	{
+		if (array_key_exists('query', $this->sql) === true)
+		{
+			$this->sql['explain'] = 'EXPLAIN';
 		}
 
 		return $this;
