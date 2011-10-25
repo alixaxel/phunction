@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.10.12 (github.com/alixaxel/phunction/)
+* phunction 1.10.25 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -904,6 +904,44 @@ class phunction_Date extends phunction
 		}
 
 		return false;
+	}
+
+	public static function Timezones($country = null, $continent = null)
+	{
+		$result = array();
+
+		if (is_array($timezones = DateTimeZone::listIdentifiers()) === true)
+		{
+			$timestamp = parent::Date('U', 'now', null, '-6 months');
+
+			if ((strlen($country) == 2) && (defined('DateTimeZone::PER_COUNTRY') === true))
+			{
+				$timezones = DateTimeZone::listIdentifiers(DateTimeZone::PER_COUNTRY, $country);
+			}
+
+			foreach (preg_grep('~' . preg_quote($continent, '~') . '/~i', $timezones) as $id)
+			{
+				$timezone = new DateTimeZone($id);
+
+				if (is_array($transitions = $timezone->getTransitions($timestamp)) === true)
+				{
+					while ((isset($result[$id]) !== true) && (is_null($transition = array_shift($transitions)) !== true))
+					{
+						$result[$id] = (($transition['isdst'] !== true) && ($transition['ts'] >= $timestamp)) ? $transition['offset'] : null;
+					}
+				}
+			}
+
+			if (array_multisort($result, SORT_NUMERIC, preg_replace('~^[^/]+/~', '', array_keys($result)), SORT_REGULAR, $result) === true)
+			{
+				foreach ($result as $key => $value)
+				{
+					$result[$key] = sprintf('(GMT %+03d:%02u) %s', $value / 3600, abs($value) % 3600 / 60, ltrim(strstr($key, '/'), '/'));
+				}
+			}
+		}
+
+		return preg_replace(array('~ [+]00:00~', '~_~', '~/~'), array('', ' ', ' - '), $result);
 	}
 
 	public static function Zodiac($date = 'now')
