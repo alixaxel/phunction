@@ -4318,11 +4318,13 @@ class phunction_Net_Google extends phunction_Net
 		return preg_replace('~^https?:~', '', parent::URL('http://maps.google.com/', '/maps/api/staticmap', $data));
 	}
 
-	public static function QR($query, $size = '500x500')
+	public static function QR($query, $size = '500x500', $quality = 'Q')
 	{
 		$data = array
 		(
 			'chl' => $query,
+			'chld' => sprintf('%s|2', $quality),
+			'choe' => 'UTF-8',
 			'chs' => $size,
 			'cht' => 'qr',
 		);
