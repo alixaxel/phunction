@@ -923,7 +923,7 @@ class phunction_Date extends phunction
 			{
 				$timezone = new DateTimeZone($id);
 
-				if (is_array($transitions = $timezone->getTransitions($timestamp)) === true)
+				if (is_array($transitions = $timezone->getTransitions()) === true)
 				{
 					while ((isset($result[$id]) !== true) && (is_null($transition = array_shift($transitions)) !== true))
 					{
