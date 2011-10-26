@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.10.25 (github.com/alixaxel/phunction/)
+* phunction 1.10.26 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -941,7 +941,7 @@ class phunction_Date extends phunction
 			}
 		}
 
-		return preg_replace(array('~ [+]00:00~', '~_~', '~/~'), array('', ' ', ' - '), $result);
+		return str_replace(array(' +00:00', '_', '/'), array('', ' ', ' - '), $result);
 	}
 
 	public static function Zodiac($date = 'now')
