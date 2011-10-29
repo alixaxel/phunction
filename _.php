@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.10.26 (github.com/alixaxel/phunction/)
+* phunction 1.10.29 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -3359,7 +3359,7 @@ class phunction_Net extends phunction
 				curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
 				curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
 
-				if (max(ini_get('safe_mode'), strlen(ini_get('open_basedir'))) == 0)
+				if ((preg_match('~^[0]?$~', ini_get('safe_mode')) > 0) && (ini_set('open_basedir', null) !== false))
 				{
 					curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 				}
