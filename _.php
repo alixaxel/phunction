@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.11.8 (github.com/alixaxel/phunction/)
+* phunction 1.11.9 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -719,6 +719,19 @@ class phunction
 		else if (strlen($scheme = preg_replace('~^www$~i', 'http', getservbyport(self::Value($_SERVER, 'SERVER_PORT', 80), 'tcp'))) > 0)
 		{
 			return self::URL($scheme . '://' . self::Value($_SERVER, 'HTTP_HOST') . self::Value($_SERVER, 'REQUEST_URI'), $path, $query);
+		}
+
+		return false;
+	}
+
+	public static function Update($ttl = null)
+	{
+		if ((is_writable(__FILE__) === true) && ((empty($ttl) === true) || ((time() - filemtime(__FILE__)) >= intval($ttl))))
+		{
+			if (($result = ph()->Net->CURL('https://github.com/alixaxel/phunction/raw/master/_.php')) !== false)
+			{
+				return ph()->Disk->File(__FILE__, $result, false);
+			}
 		}
 
 		return false;
