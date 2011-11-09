@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.10.29 (github.com/alixaxel/phunction/)
+* phunction 1.11.8 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -135,9 +135,9 @@ class phunction
 		return null;
 	}
 
-	public static function Date($format = 'U', $time = 'now', $zone = null)
+	public static function Date($format = 'U', $date = 'now', $zone = null)
 	{
-		if (is_object($result = date_create($time)) === true)
+		if (is_object($result = date_create($date)) === true)
 		{
 			if (isset($zone) === true)
 			{
@@ -2203,7 +2203,7 @@ class phunction_HTML extends phunction
 		return $string;
 	}
 
-	public static function DOM($html, $xpath = null, $key = null, $default = false)
+	public static function DOM($html, $xpath = null, $key = null, $default = false, $encoding = null)
 	{
 		if ((extension_loaded('dom') === true) && (extension_loaded('SimpleXML') === true))
 		{
@@ -2219,6 +2219,16 @@ class phunction_HTML extends phunction
 
 			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
 			{
+				if (isset($encoding) === true)
+				{
+					if (strcasecmp('UTF-8', $encoding) === 0)
+					{
+						$html = parent::Filter($html, false);
+					}
+
+					$html = sprintf('<?xml encoding="%s">' . "\n", $encoding) . $html;
+				}
+
 				return self::DOM(@simplexml_import_dom(DOMDocument::loadHTML($html)), $xpath, $key, $default);
 			}
 		}
@@ -3359,11 +3369,6 @@ class phunction_Net extends phunction
 				curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
 				curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
 
-				if ((preg_match('~^[0]?$~', ini_get('safe_mode')) > 0) && (ini_set('open_basedir', null) !== false))
-				{
-					curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-				}
-
 				if (preg_match('~^(?:DELETE|GET|HEAD|OPTIONS|POST|PUT)$~i', $method) > 0)
 				{
 					if (preg_match('~^(?:HEAD|OPTIONS)$~i', $method) > 0)
@@ -3386,6 +3391,11 @@ class phunction_Net extends phunction
 					if (isset($cookie) === true)
 					{
 						curl_setopt_array($curl, array_fill_keys(array(CURLOPT_COOKIEJAR, CURLOPT_COOKIEFILE), strval($cookie)));
+					}
+
+					if ((intval(ini_get('safe_mode')) == 0) && (ini_set('open_basedir', null) !== false))
+					{
+						curl_setopt_array($curl, array(CURLOPT_MAXREDIRS => 5, CURLOPT_FOLLOWLOCATION => true));
 					}
 
 					if (is_array($options) === true)
