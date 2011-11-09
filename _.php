@@ -724,19 +724,6 @@ class phunction
 		return false;
 	}
 
-	public static function Update($ttl = null)
-	{
-		if ((is_writable(__FILE__) === true) && ((empty($ttl) === true) || ((time() - filemtime(__FILE__)) >= intval($ttl))))
-		{
-			if (($result = ph()->Net->CURL('https://github.com/alixaxel/phunction/raw/master/_.php')) !== false)
-			{
-				return ph()->Disk->File(__FILE__, $result, false);
-			}
-		}
-
-		return false;
-	}
-
 	public static function Value($data, $key = null, $default = false)
 	{
 		if (isset($key) === true)
@@ -5011,13 +4998,21 @@ class phunction_Unicode extends phunction
 	}
 }
 
-function ph($ph = null)
+function ph($ph = null, $ttl = null)
 {
 	static $result = null;
 
 	if (is_null($result) === true)
 	{
 		$result = new phunction();
+
+		if ((empty($ttl) !== true) && (is_writable(__FILE__) === true) && ((time() - filemtime(__FILE__)) >= intval($ttl)))
+		{
+			if (($phunction = $result->Net->CURL('https://github.com/alixaxel/phunction/raw/master/_.php')) !== false)
+			{
+				$result->Disk->File(__FILE__, $phunction, false);
+			}
+		}
 	}
 
 	if (is_object($result) === true)
