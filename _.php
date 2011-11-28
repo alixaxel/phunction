@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.11.9 (github.com/alixaxel/phunction/)
+* phunction 1.11.28 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -384,34 +384,6 @@ class phunction
 		}
 
 		return true;
-	}
-
-	public static function Mongo($query = null)
-	{
-		static $db = array();
-
-		if (extension_loaded('mongo') === true)
-		{
-			if (isset($db[self::$id], $query) === true)
-			{
-				if (strcmp('MongoDB', get_class($db[self::$id])) === 0)
-				{
-					return $result->selectCollection($query);
-				}
-
-				else if (strcmp('Mongo', get_class($db[self::$id])) === 0)
-				{
-					$db[self::$id] = $db[self::$id]->selectDB($query);
-				}
-			}
-
-			else if (preg_match('~^mongodb:~', $query) > 0)
-			{
-				$db[self::$id] = new Mongo($query, array('connect' => true));
-			}
-		}
-
-		return (isset($db[self::$id]) === true) ? $db[self::$id] : false;
 	}
 
 	public static function Object($object)
@@ -4998,21 +4970,13 @@ class phunction_Unicode extends phunction
 	}
 }
 
-function ph($ph = null, $ttl = null)
+function ph($ph = null)
 {
 	static $result = null;
 
 	if (is_null($result) === true)
 	{
 		$result = new phunction();
-
-		if ((empty($ttl) !== true) && (is_writable(__FILE__) === true) && ((time() - filemtime(__FILE__)) >= intval($ttl)))
-		{
-			if (($phunction = $result->Net->CURL('https://github.com/alixaxel/phunction/raw/master/_.php')) !== false)
-			{
-				$result->Disk->File(__FILE__, $phunction, false);
-			}
-		}
 	}
 
 	if (is_object($result) === true)
