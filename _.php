@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.11.28 (github.com/alixaxel/phunction/)
+* phunction 1.12.6 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -2346,6 +2346,16 @@ class phunction_HTML extends phunction
 
 		return false;
 	}
+
+	public static function Typography($string, $quotes = true)
+	{
+		if ($quotes === true)
+		{
+			$string = preg_replace(array("~'([^']+)'~", '~"([^"]+)"~'), array('&#8216;$1&#8217;', '&#8220;$1&#8221;'), $string);
+		}
+
+		return preg_replace(array('~[.]{2,}~', '~--~', '~-~'), array('&hellip;', '&mdash;', '&ndash;'), $string);
+	}
 }
 
 class phunction_HTML_Form extends phunction_HTML
@@ -4078,15 +4088,21 @@ class phunction_Net extends phunction
 		return false;
 	}
 
-	public static function VIES($vatin, $country)
+	public static function VIES($vatin, $country, $key = 'valid', $default = null)
 	{
 		if ((preg_match('~[A-Z]{2}~', $country) > 0) && (preg_match('~[0-9A-Z.+*]{2,12}~', $vatin) > 0))
 		{
-			$soap = new SoapClient('http://ec.europa.eu/taxation_customs/vies/checkVatService.wsdl', array('exceptions' => false));
-
-			if (is_object($soap) === true)
+			try
 			{
-				return parent::Value($soap->__soapCall('checkVat', array(array('countryCode' => $country, 'vatNumber' => $vatin))), 'valid');
+				if (is_object($soap = new SoapClient('http://ec.europa.eu/taxation_customs/vies/checkVatService.wsdl', array('exceptions' => true))) === true)
+				{
+					return parent::Value($soap->__soapCall('checkVat', array(array('countryCode' => $country, 'vatNumber' => $vatin))), $key, $default);
+				}
+			}
+
+			catch (SoapFault $e)
+			{
+				return $default;
 			}
 		}
 
