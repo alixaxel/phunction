@@ -8,6 +8,9 @@
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
+/**
+ * Superclass
+ */
 class phunction
 {
 	public static $id = null;
@@ -63,6 +66,13 @@ class phunction
 		array_map('ini_set', array('html_errors', 'display_errors', 'default_socket_timeout'), array(0, 1, 3));
 	}
 
+	/**
+	 * Magic method to load and instantiate a new class
+	 * ph()->Foo creates and instance of phunction_Foo
+	 *
+	 * @param string $key
+	 * @return object
+	 */
 	public function __get($key)
 	{
 		$class = __CLASS__ . '_' . $key;
@@ -228,6 +238,9 @@ class phunction
 		return (isset($db[self::$id]) === true) ? $db[self::$id] : false;
 	}
 
+	/**
+	 * Function to nicely print the internals of a variable
+	 */
 	public static function Dump()
 	{
 		foreach (func_get_args() as $argument)
@@ -759,6 +772,8 @@ class phunction
 	}
 }
 
+// --------------------------------------------------------------------------
+
 class phunction_Date extends phunction
 {
 	public function __construct()
@@ -948,6 +963,8 @@ class phunction_Date extends phunction
 	}
 }
 
+// --------------------------------------------------------------------------
+
 class phunction_DB extends phunction
 {
 	public function __construct()
@@ -1067,6 +1084,8 @@ class phunction_DB extends phunction
 		return $data;
 	}
 }
+
+// --------------------------------------------------------------------------
 
 class phunction_DB_SQL extends phunction_DB
 {
@@ -1428,6 +1447,8 @@ class phunction_DB_SQL extends phunction_DB
 		return $this;
 	}
 }
+
+// --------------------------------------------------------------------------
 
 class phunction_Disk extends phunction
 {
@@ -2145,6 +2166,8 @@ class phunction_Disk extends phunction
 	}
 }
 
+// --------------------------------------------------------------------------
+
 class phunction_HTML extends phunction
 {
 	public function __construct()
@@ -2356,6 +2379,8 @@ class phunction_HTML extends phunction
 	}
 }
 
+// --------------------------------------------------------------------------
+
 class phunction_HTML_Form extends phunction_HTML
 {
 	public function __construct()
@@ -2410,6 +2435,8 @@ class phunction_HTML_Form extends phunction_HTML
 		return $result;
 	}
 }
+
+// --------------------------------------------------------------------------
 
 class phunction_HTTP extends phunction
 {
@@ -2661,6 +2688,11 @@ class phunction_HTTP extends phunction
 	}
 }
 
+// --------------------------------------------------------------------------
+
+/**
+ * Class for checking variable types and formats
+ */
 class phunction_Is extends phunction
 {
 	public function __construct()
@@ -2743,6 +2775,11 @@ class phunction_Is extends phunction
 	}
 }
 
+// --------------------------------------------------------------------------
+
+/**
+ * Class holding convenient math functions
+ */
 class phunction_Math extends phunction
 {
 	public function __construct()
@@ -3247,6 +3284,8 @@ class phunction_Math extends phunction
 		return false;
 	}
 }
+
+// --------------------------------------------------------------------------
 
 class phunction_Net extends phunction
 {
@@ -4139,6 +4178,8 @@ class phunction_Net extends phunction
 	}
 }
 
+// --------------------------------------------------------------------------
+
 class phunction_Net_Akismet extends phunction_Net
 {
 	public function __construct()
@@ -4213,6 +4254,11 @@ class phunction_Net_Akismet extends phunction_Net
 	}
 }
 
+// --------------------------------------------------------------------------
+
+/**
+ * Class for convenient access to google APIs
+ */
 class phunction_Net_Google extends phunction_Net
 {
 	public function __construct()
@@ -4478,6 +4524,8 @@ class phunction_Net_Google extends phunction_Net
 	}
 }
 
+// --------------------------------------------------------------------------
+
 class phunction_Net_PayPal extends phunction_Net
 {
 	public function __construct()
@@ -4523,6 +4571,8 @@ class phunction_Net_PayPal extends phunction_Net
 		return false;
 	}
 }
+
+// --------------------------------------------------------------------------
 
 class phunction_Text extends phunction
 {
@@ -4799,6 +4849,11 @@ class phunction_Text extends phunction
 	}
 }
 
+// --------------------------------------------------------------------------
+
+/**
+ * Class for unicode string manipulation
+ */
 class phunction_Unicode extends phunction
 {
 	public function __construct()
@@ -4989,6 +5044,11 @@ class phunction_Unicode extends phunction
 	}
 }
 
+// --------------------------------------------------------------------------
+
+/**
+ * Singleton method to retrieve phunction instance
+ */
 function ph($ph = null)
 {
 	static $result = null;
@@ -5006,4 +5066,4 @@ function ph($ph = null)
 	return $result;
 }
 
-?>
+// End of _.php
