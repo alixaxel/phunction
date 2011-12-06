@@ -2189,14 +2189,9 @@ class phunction_HTML extends phunction
 
 			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
 			{
-				if (function_exists('mb_detect_encoding') === true)
+				if ((isset($encoding) === true) && (function_exists('mb_convert_encoding') === true))
 				{
-					$encoding = mb_detect_encoding($data, 'auto');
-
-					if (function_exists('mb_convert_encoding') === true)
-					{
-						$html = mb_convert_encoding($html, 'HTML-ENTITIES', ($encoding === false) ? 'UTF-8' : $encoding);
-					}
+					$html = mb_convert_encoding($html, 'HTML-ENTITIES', $encoding);
 				}
 
 				return self::DOM(@simplexml_import_dom(DOMDocument::loadHTML($html)), $xpath, $key, $default);
@@ -2281,14 +2276,9 @@ class phunction_HTML extends phunction
 
 			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
 			{
-				if (function_exists('mb_detect_encoding') === true)
+				if ((isset($encoding) === true) && (function_exists('mb_convert_encoding') === true))
 				{
-					$encoding = mb_detect_encoding($data, 'auto');
-
-					if (function_exists('mb_convert_encoding') === true)
-					{
-						$html = mb_convert_encoding($html, 'HTML-ENTITIES', ($encoding === false) ? 'UTF-8' : $encoding);
-					}
+					$html = mb_convert_encoding($html, 'HTML-ENTITIES', $encoding);
 				}
 
 				if (is_object($html = @DOMDocument::loadHTML($html)) === true)
