@@ -309,19 +309,17 @@ class phunction
 
 		else if (is_string($data) === true)
 		{
-			if (extension_loaded('mbstring') === true)
+			if (function_exists('mb_detect_encoding') === true)
 			{
 				$encoding = mb_detect_encoding($data, 'auto');
 			}
 
-			$data = @iconv($encoding, 'UTF-8//IGNORE', $data);
-
-			if ($control === true)
+			if (($data = @iconv(($encoding === false) ? 'UTF-8' : $encoding, 'UTF-8//IGNORE', $data)) !== false)
 			{
-				return preg_replace('~\p{C}+~u', '', $data);
+				return ($control === true) ? preg_replace('~\p{C}+~u', '', $data) : preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $data);
 			}
 
-			return preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $data);
+			return false;
 		}
 
 		return $data;
@@ -2175,7 +2173,7 @@ class phunction_HTML extends phunction
 		return $string;
 	}
 
-	public static function DOM($html, $xpath = null, $key = null, $default = false, $encoding = null)
+	public static function DOM($html, $xpath = null, $key = null, $default = false, $encoding = 'UTF-8')
 	{
 		if ((extension_loaded('dom') === true) && (extension_loaded('SimpleXML') === true))
 		{
@@ -2191,14 +2189,14 @@ class phunction_HTML extends phunction
 
 			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
 			{
-				if (isset($encoding) === true)
+				if (function_exists('mb_detect_encoding') === true)
 				{
-					if (strcasecmp('UTF-8', $encoding) === 0)
-					{
-						$html = parent::Filter($html, false);
-					}
+					$encoding = mb_detect_encoding($data, 'auto');
 
-					$html = sprintf('<?xml encoding="%s">' . "\n", $encoding) . $html;
+					if (function_exists('mb_convert_encoding') === true)
+					{
+						$html = mb_convert_encoding($html, 'HTML-ENTITIES', ($encoding === false) ? 'UTF-8' : $encoding);
+					}
 				}
 
 				return self::DOM(@simplexml_import_dom(DOMDocument::loadHTML($html)), $xpath, $key, $default);
@@ -2235,7 +2233,7 @@ class phunction_HTML extends phunction
 		return false;
 	}
 
-	public static function Purify($html, $whitelist = null, $protocols = 'http|https|mailto')
+	public static function Purify($html, $whitelist = null, $protocols = 'http|https|mailto', $encoding = 'UTF-8')
 	{
 		if (extension_loaded('dom') === true)
 		{
@@ -2283,6 +2281,16 @@ class phunction_HTML extends phunction
 
 			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
 			{
+				if (function_exists('mb_detect_encoding') === true)
+				{
+					$encoding = mb_detect_encoding($data, 'auto');
+
+					if (function_exists('mb_convert_encoding') === true)
+					{
+						$html = mb_convert_encoding($html, 'HTML-ENTITIES', ($encoding === false) ? 'UTF-8' : $encoding);
+					}
+				}
+
 				if (is_object($html = @DOMDocument::loadHTML($html)) === true)
 				{
 					if (is_array($whitelist) !== true)
@@ -4809,6 +4817,11 @@ class phunction_Unicode extends phunction
 
 	public static function chr($string)
 	{
+		if (function_exists('mb_convert_encoding') === true)
+		{
+			return mb_convert_encoding($string, 'UTF-8', 'HTML-ENTITIES');
+		}
+
 		return html_entity_decode('&#' . $string . ';', ENT_QUOTES, 'UTF-8');
 	}
 
