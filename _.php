@@ -4868,7 +4868,7 @@ class phunction_Unicode extends phunction
 	{
 		if (function_exists('mb_convert_encoding') === true)
 		{
-			return mb_convert_encoding($string, 'UTF-8', 'HTML-ENTITIES');
+			return mb_convert_encoding('&#' . $string . ';', 'UTF-8', 'HTML-ENTITIES');
 		}
 
 		return html_entity_decode('&#' . $string . ';', ENT_QUOTES, 'UTF-8');
