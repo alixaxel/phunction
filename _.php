@@ -1,12 +1,12 @@
 <?php
 
 /**
-* The MIT License
-* http://creativecommons.org/licenses/MIT/
-*
-* phunction 1.12.6 (github.com/alixaxel/phunction/)
-* Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
-**/
+ * The MIT License
+ * http://creativecommons.org/licenses/MIT/
+ *
+ * phunction 1.12.6 (github.com/alixaxel/phunction/)
+ * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
+ **/
 
 /**
  * Superclass
@@ -1099,6 +1099,10 @@ class phunction_DB_SQL extends phunction_DB
 		}
 	}
 
+	/**
+	 * Magic method to return the last query when an
+	 * instance of the class is treated like a string
+	 */
 	public function __toString()
 	{
 		$result = null;

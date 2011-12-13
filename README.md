@@ -15,8 +15,8 @@ ex.
 ### Classes
 
 * Date
-* DB
-* DB_SQL
+* DB - database layer
+* DB_SQL - query building helper methods
 * Disk
 * HTML
 * HTTP
