@@ -10,7 +10,7 @@
 
 class phunction_Net_Facebook extends phunction_Net
 {
-    public function __construct()
+	public function __construct()
 	{
 	}
 

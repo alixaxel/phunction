@@ -10,7 +10,7 @@
 
 class phunction_DB_SQL extends phunction_DB
 {
-    public $sql = array();
+	public $sql = array();
 
 	public function __construct($sql = null)
 	{

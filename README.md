@@ -2,27 +2,27 @@
 
 ## Usage:
 
-    ph()->[{[{Sub}->]*Class}->]{Method}($arguments);
-	
+	ph()->[{[{Sub}->]*Class}->]{Method}($arguments);
+
 ## Classes:
 
 * phunction
-  * Date
-  * DB
-    * SQL
-  * Disk
-  * HTML
-    * Form
-  * HTTP
-  * Is
-  * Math
-  * Net
-    * Akismet
-    * Amazon
-    * Facebook
-    * Google
-    * PayPal
-    * Twitter
-    * Yahoo
-  * Text
-  * Unicode
+   * Date
+   * DB
+      * SQL
+   * Disk
+   * HTML
+      * Form
+   * HTTP
+   * Is
+   * Math
+   * Net
+      * Akismet
+      * Amazon
+      * Facebook
+      * Google
+      * PayPal
+      * Twitter
+      * Yahoo
+   * Text
+   * Unicode

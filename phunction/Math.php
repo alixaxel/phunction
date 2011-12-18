@@ -10,7 +10,7 @@
 
 class phunction_Math extends phunction
 {
-    public function __construct()
+	public function __construct()
 	{
 	}
 

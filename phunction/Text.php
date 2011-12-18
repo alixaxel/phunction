@@ -10,7 +10,7 @@
 
 class phunction_Text extends phunction
 {
-    public function __construct()
+	public function __construct()
 	{
 	}
 

@@ -10,7 +10,7 @@
 
 class phunction_HTML_Form extends phunction_HTML
 {
-    public function __construct()
+	public function __construct()
 	{
 	}
 
