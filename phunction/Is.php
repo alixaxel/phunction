@@ -43,17 +43,7 @@ class phunction_Is extends phunction
 	{
 		if (filter_var($number, FILTER_VALIDATE_FLOAT) !== false)
 		{
-			if ((isset($minimum) === true) && ($number < $minimum))
-			{
-				return false;
-			}
-
-			if ((isset($maximum) === true) && ($number > $maximum))
-			{
-				return false;
-			}
-
-			return true;
+			return (((isset($minimum) === true) && ($number < $minimum)) || ((isset($maximum) === true) && ($number > $maximum))) ? false : true;
 		}
 
 		return false;
