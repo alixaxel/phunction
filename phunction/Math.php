@@ -168,6 +168,25 @@ class phunction_Math extends phunction
 		return stats_standard_deviation(parent::Flatten(func_get_args()));
 	}
 
+	public static function Divisors($number)
+	{
+		$i = 0;
+		$result = array();
+
+		if (fmod($number, 1) == 0)
+		{
+			while ($i < $number)
+			{
+				if ($number % ++$i == 0)
+				{
+					$result[] = $i;
+				}
+			}
+		}
+
+		return $result;
+	}
+
 	public static function Enum($id)
 	{
 		static $enum = array();
