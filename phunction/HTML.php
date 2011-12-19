@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.12.18 (github.com/alixaxel/phunction/)
+* phunction 1.12.19 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -67,21 +67,22 @@ class phunction_HTML extends phunction
 		return $string;
 	}
 
-	public static function Obfuscate($string, $reverse = true)
+	public static function Obfuscate($string, $reverse = false)
 	{
-		if (strlen($string) > 0)
+		if (count($string = ph()->Unicode->str_split($string)) > 0)
 		{
-			$string = array_map(array('phunction_Unicode', 'ord'), ph()->Unicode->str_split($string));
-
-			if ($reverse !== true)
+			foreach (array_map(array('phunction_Unicode', 'ord'), $string) as $key => $value)
 			{
-				return sprintf('&#%s;', implode(';&#', $string));
+				$string[$key] = sprintf('&#%s;', (mt_rand(0, 1) > 0) ? $value : ('x' . dechex($value)));
 			}
 
-			return sprintf('<span style="unicode-bidi: bidi-override; direction: rtl;">&#%s;</span>', implode(';&#', array_reverse($string)));
+			if ($reverse === true)
+			{
+				$string = array(self::Tag('span', implode('', array_reverse($string)), array('style' => 'direction: rtl; unicode-bidi: bidi-override;')));
+			}
 		}
 
-		return false;
+		return implode('', $string);
 	}
 
 	public static function Purify($html, $whitelist = null, $protocols = 'http|https|mailto')
@@ -183,7 +184,7 @@ class phunction_HTML extends phunction
 			return sprintf('<%s%s />' . "\n", $tag, implode('', $attributes));
 		}
 
-		return sprintf('<%s%s>%s</%s>' . "\n", $tag, implode('', $attributes), self::Encode($content), $tag);
+		return sprintf('<%s%s>%s</%s>' . "\n", $tag, implode('', $attributes), $content, $tag);
 	}
 
 	public static function Title($string, $raw = true)
