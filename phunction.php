@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 1.12.18 (github.com/alixaxel/phunction/)
+* phunction 1.12.20 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -329,19 +329,19 @@ class phunction
 
 		if (is_array($data) === true)
 		{
-			if (isset($key) === true)
-			{
-				foreach ($data as $value)
-				{
-					$result[] = self::Value($value, $key, $default);
-				}
-			}
-
-			else if (is_null($key) === true)
+			if (is_null($key) === true)
 			{
 				foreach (new RecursiveIteratorIterator(new RecursiveArrayIterator($data)) as $value)
 				{
 					$result[] = $value;
+				}
+			}
+
+			else if (isset($key) === true)
+			{
+				foreach ($data as $value)
+				{
+					$result[] = self::Value($value, $key, $default);
 				}
 			}
 		}
