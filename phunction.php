@@ -175,7 +175,7 @@ class phunction
 
 			if (is_object($result[self::$id][$hash]) === true)
 			{
-				if ($result[self::$id][$hash]->execute(array_slice(func_get_args(), 1)) === true)
+				if ($result[self::$id][$hash]->execute(self::Flatten(array_slice(func_get_args(), 1))) === true)
 				{
 					if (preg_match('~^(?:INSERT|REPLACE)\b~i', $query) > 0)
 					{
