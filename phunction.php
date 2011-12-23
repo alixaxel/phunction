@@ -73,36 +73,6 @@ class phunction
 		return (substr_count($class, '_') > 1) ? new $class() : $this->$key = new $class();
 	}
 
-	public static function ACL($resource, $action, $role, $auth = null)
-	{
-		static $result = array();
-
-		if (is_bool($auth) === true)
-		{
-			$result[$resource][$action][$role] = $auth;
-		}
-
-		return self::Value($result, array($resource, $action, $role));
-	}
-
-	public static function Auth($id = null, $role = null)
-	{
-		if (strlen(session_id()) > 0)
-		{
-			if ((isset($role) === true) && ((empty($_SESSION[__METHOD__]) === true) || (session_regenerate_id(true) === true)))
-			{
-				$_SESSION[__METHOD__] = array($id => $role);
-			}
-
-			if ((($result = self::Value($_SESSION, __METHOD__)) !== false) && (current($result) !== false))
-			{
-				return $result;
-			}
-		}
-
-		return false;
-	}
-
 	public static function Cache($key, $value = null, $ttl = 60)
 	{
 		if (extension_loaded('apc') === true)
