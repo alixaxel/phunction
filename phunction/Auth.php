@@ -17,17 +17,29 @@ class phunction_Auth extends phunction
 	{
 		if ((strlen(session_id()) > 0) && (is_array($result = parent::Value($_SESSION, __CLASS__)) === true))
 		{
-			return strcasecmp('id', $key) ? key($result) : current($result);
+			return (strcasecmp('id', $key) === 0) ? key($result) : current($result);
 		}
 
 		return false;
 	}
 
-	public static function Check()
+	public static function ACL($role, $resource = null, $action = null, $auth = null)
 	{
-		if ((strlen(session_id()) > 0) && (count(parent::Value($_SESSION, __CLASS__, null)) == 1))
+		static $result = array();
+
+		if (is_bool($auth) === true)
 		{
-			return true;
+			$result[$role][$resource][$action] = $auth;
+		}
+
+		return parent::Value($result, array($role, $resource, $action));
+	}
+
+	public static function Check($resource = null, $action = null)
+	{
+		if ((strlen(session_id()) > 0) && (is_array($result = parent::Value($_SESSION, __CLASS__)) === true))
+		{
+			return (strlen($role = current($result)) > 0) ? self::ACL($role, $resource, $action) : true;
 		}
 
 		return false;
