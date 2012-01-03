@@ -132,7 +132,7 @@ class phunction_DB_SQL extends phunction_DB
 		return $this;
 	}
 
-	public function Having($data, $operator = 'LIKE', $merge = 'AND')
+	public function Having($data, $operator = '=', $merge = 'AND')
 	{
 		if ((array_key_exists('query', $this->sql) === true) && (count($data) > 0))
 		{
@@ -329,7 +329,7 @@ class phunction_DB_SQL extends phunction_DB
 		return $this;
 	}
 
-	public function Where($data, $operator = 'LIKE', $merge = 'AND')
+	public function Where($data, $operator = '=', $merge = 'AND')
 	{
 		if ((array_key_exists('query', $this->sql) === true) && (count($data) > 0))
 		{
