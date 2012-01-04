@@ -28,21 +28,27 @@ class phunction_DB extends phunction
 		return false;
 	}
 
-	public static function Tick($data)
+	public static function Tick($string)
 	{
-		if (is_object(parent::DB()) === true)
+		$string = preg_replace('~[`"]+~', '', $string);
+
+		if ((is_object(parent::DB()) === true) && (strcmp('mysql', parent::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0))
 		{
-			$data = preg_replace('~[`"]+~', '', $data);
-
-			if (strcmp('mysql', parent::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
-			{
-				return str_ireplace(' `AS` ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '`$1`', $data));
-			}
-
-			return str_ireplace(' "AS" ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '"$1"', $data));
+			return str_ireplace(' `AS` ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '`$1`', $string));
 		}
 
-		return $data;
+		return str_ireplace(' "AS" ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '"$1"', $string));
+	}
+
+	public static function Wildcard($string, $wildcard = '%\\_')
+	{
+		$string = addcslashes($string, $wildcard);
+
+		if ((is_object(parent::DB()) === true) && (strcmp('pgsql', parent::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0))
+		{
+		}
+
+		return $string;
 	}
 }
 
