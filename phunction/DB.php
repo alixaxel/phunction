@@ -42,13 +42,7 @@ class phunction_DB extends phunction
 
 	public static function Wildcard($string, $wildcard = '%\\_')
 	{
-		$string = addcslashes($string, $wildcard);
-
-		if ((is_object(parent::DB()) === true) && (strcmp('pgsql', parent::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0))
-		{
-		}
-
-		return $string;
+		return addcslashes($string, $wildcard);
 	}
 }
 
