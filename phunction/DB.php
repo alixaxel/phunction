@@ -20,29 +20,56 @@ class phunction_DB extends phunction
 
 	public static function Quote($data)
 	{
-		if (is_object(parent::DB()) === true)
+		if (is_array($data) === true)
 		{
-			return (is_array($data) === true) ? parent::DB()->quote($data) : array_map(array(parent::DB(), 'quote'), $data);
+			return array_map('self::Quote', $data);
+		}
+
+		else if (is_object(parent::DB()) === true)
+		{
+			switch (gettype($data))
+			{
+				case 'boolean':
+				case 'integer':
+					return intval($data);
+				break;
+
+				case 'object':
+					return strval($data);
+				break;
+			}
+
+			return parent::DB()->quote($data);
 		}
 
 		return false;
 	}
 
-	public static function Tick($string)
+	public static function Tick($data)
 	{
-		$string = preg_replace('~[`"]+~', '', $string);
+		$data = preg_replace('~[`"]+~', '', $data);
 
 		if ((is_object(parent::DB()) === true) && (strcmp('mysql', parent::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0))
 		{
-			return str_ireplace(' `AS` ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '`$1`', $string));
+			return str_ireplace(' `AS` ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '`$1`', $data));
 		}
 
-		return str_ireplace(' "AS" ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '"$1"', $string));
+		return str_ireplace(' "AS" ', ' AS ', preg_replace('~\b(\w+)\b(?![(])~', '"$1"', $data));
 	}
 
-	public static function Wildcard($string, $wildcard = '%\\_')
+	public static function Wildcard($data, $escape = '%_')
 	{
-		return addcslashes($string, $wildcard);
+		if (is_array($data) === true)
+		{
+			foreach ($data as $key => $value)
+			{
+				$data[$key] = self::Wildcard($value, $escape);
+			}
+
+			return $data;
+		}
+
+		return addcslashes($data, $escape . '\\');
 	}
 }
 
