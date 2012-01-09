@@ -11,12 +11,8 @@ class phunction_DB_SQL extends phunction_DB
 {
 	public $sql = array();
 
-	public function __construct($sql = null)
+	public function __construct()
 	{
-		if (isset($sql) === true)
-		{
-			$this->sql['sql'] = trim($sql);
-		}
 	}
 
 	public function __toString()
@@ -68,12 +64,7 @@ class phunction_DB_SQL extends phunction_DB
 			$result .= ';';
 		}
 
-		else if (array_key_exists('sql', $this->sql) === true)
-		{
-			$result .= sprintf('%s;', rtrim($this->sql['sql'], ';'));
-		}
-
-		return strval($result);
+		return (array_key_exists('literal', $this->sql) === true) ? $this->sql['literal'] : strval($result);
 	}
 
 	public function Delete($table)
@@ -82,12 +73,9 @@ class phunction_DB_SQL extends phunction_DB
 
 		if (is_object(phunction::DB()) === true)
 		{
-			if (is_array($table) !== true)
-			{
-				$table = array_filter(array_map('trim', explode(',', $table)), 'strlen');
-			}
+			$table = (is_array($table) !== true) ? explode(',', $table) : $table;
 
-			if (count($table = parent::Tick($table)) == 1)
+			if (count($table = parent::Tick(array_filter(array_map('trim', $table), 'strlen'))) == 1)
 			{
 				$this->sql['query'] = sprintf('DELETE FROM %s', implode(', ', $table));
 			}
@@ -110,12 +98,9 @@ class phunction_DB_SQL extends phunction_DB
 	{
 		if (array_key_exists('query', $this->sql) === true)
 		{
-			if (is_array($data) !== true)
-			{
-				$data = array_filter(array_map('trim', explode(',', $data)), 'strlen');
-			}
+			$data = (is_array($data) !== true) ? explode(',', $data) : $data;
 
-			if (count($data = parent::Tick($data)) > 0)
+			if (count($data = parent::Tick(array_filter(array_map('trim', $data), 'strlen'))) > 0)
 			{
 				foreach ($data as $key => $value)
 				{
@@ -138,16 +123,9 @@ class phunction_DB_SQL extends phunction_DB
 		{
 			$merge = array($merge, 'HAVING');
 
-			foreach ($data as $key => $value)
+			foreach (array_combine(parent::Tick(array_keys($data)), parent::Quote($data)) as $key => $value)
 			{
-				$key = parent::Tick($key);
-
-				if (is_object($value) === true)
-				{
-					$value = sprintf('(%s)', rtrim(strval($value), ';'));
-				}
-
-				else if (is_array($value = array_map(array(phunction::DB(), 'quote'), (array) $value)) === true)
+				if (is_array($value) === true)
 				{
 					if (preg_match('~\b(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
 					{
@@ -157,7 +135,7 @@ class phunction_DB_SQL extends phunction_DB
 					$value = (preg_match('~\b(?:NOT\s+)?IN\b~i', $operator) > 0) ? sprintf('(%s)', implode(', ', $value)) : array_shift($value);
 				}
 
-				$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['where'])], $key, $operator, $value);
+				$this->sql['having'][] = sprintf('%s %s %s %s', $merge[empty($this->sql['having'])], $key, $operator, $value);
 			}
 		}
 
@@ -170,21 +148,30 @@ class phunction_DB_SQL extends phunction_DB
 
 		if (is_object(phunction::DB()) === true)
 		{
-			if (is_array($table) !== true)
-			{
-				$table = array_filter(array_map('trim', explode(',', $table)), 'strlen');
-			}
+			$table = (is_array($table) !== true) ? explode(',', $table) : $table;
 
-			if ((count($table = parent::Tick($table)) == 1) && (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0))
+			if ((count($table = parent::Tick(array_filter(array_map('trim', $table), 'strlen'))) == 1) && (count($data) > 0))
 			{
-				$this->sql['query'] = sprintf('%s INTO %s', ($replace === true) ? 'REPLACE' : 'INSERT', implode(', ', $table));
+				$this->sql['query'] = sprintf('INSERT INTO %s', implode(', ', $table));
 
 				if ($data !== array_values($data))
 				{
 					$this->sql['query'] .= sprintf(' (%s)', implode(', ', parent::Tick(array_keys($data))));
 				}
 
-				$this->sql['query'] .= sprintf(' VALUES (%s)', implode(', ', $data));
+				$this->sql['query'] .= sprintf(' VALUES (%s)', implode(', ', parent::Quote($data)));
+
+				if ((is_array($replace) === true) && (strcmp('mysql', phunction::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0))
+				{
+					foreach ($replace as $key => $value)
+					{
+						$replace[$key] = sprintf('%s = %s', parent::Tick($key), parent::Quote($value));
+					}
+
+					$this->sql['query'] .= sprintf(' ON DUPLICATE KEY UPDATE %s', implode(', ', $replace));
+				}
+
+				$this->sql['query'] = preg_replace('~^(INSERT)~', sprintf('%s', ($replace === true) ? 'REPLACE' : '$1'), $this->sql['query'], 1);
 			}
 		}
 
@@ -197,35 +184,32 @@ class phunction_DB_SQL extends phunction_DB
 		{
 			foreach (array('data', 'table') as $value)
 			{
-				if (is_array($$value) !== true)
-				{
-					$$value = array_filter(array_map('trim', explode(',', $$value)), 'strlen');
-				}
+				$$value = (is_array($$value) !== true) ? explode(',', $$value) : $$value;
 			}
 
-			if (count($table = parent::Tick($table)) >= 1)
+			if (count($table = parent::Tick(array_filter(array_map('trim', $table), 'strlen'))) >= 1)
 			{
-				if (empty($data) === true)
+				if (count($data = parent::Tick(array_filter(array_map('trim', $data), 'strlen'))) > 0)
 				{
-					$this->sql['join'][] = sprintf('%s JOIN %s', trim('NATURAL ' . $type), implode(', ', $table));
-				}
-
-				else if (count($data = parent::Tick($data)) > 0)
-				{
-					if ($data === array_values($data))
-					{
-						$this->sql['join'][] = sprintf('%s %s USING (%s)', trim($type . ' JOIN'), implode(', ', $table), implode(', ', $data));
-					}
-
-					else if (strlen($merge = sprintf(' %s ', trim($merge))) > 2)
+					if ($data !== array_values($data))
 					{
 						foreach ($data as $key => $value)
 						{
 							$data[$key] = sprintf('%s %s %s', parent::Tick($key), $operator, $value);
 						}
 
-						$this->sql['join'][] = sprintf('%s %s ON (%s)', trim($type . ' JOIN'), implode(', ', $table), implode($merge, $data));
+						$this->sql['join'][] = sprintf('%s %s ON (%s)', trim($type . ' JOIN'), implode(', ', $table), implode(sprintf(' %s ', $merge), $data));
 					}
+
+					else
+					{
+						$this->sql['join'][] = sprintf('%s %s USING (%s)', trim($type . ' JOIN'), implode(', ', $table), implode(', ', $data));
+					}
+				}
+
+				else if (empty($data) === true)
+				{
+					$this->sql['join'][] = sprintf('%s JOIN %s', trim('NATURAL ' . $type), implode(', ', $table));
 				}
 			}
 		}
@@ -248,16 +232,23 @@ class phunction_DB_SQL extends phunction_DB
 		return $this;
 	}
 
+	public function Literal($string)
+	{
+		if (is_object($result = new phunction_DB_SQL()) === true)
+		{
+			$result->sql['literal'] = trim($string);
+		}
+
+		return $result;
+	}
+
 	public function Order($data, $order = 'ASC')
 	{
 		if (array_key_exists('query', $this->sql) === true)
 		{
-			if (is_array($data) !== true)
-			{
-				$data = array_filter(array_map('trim', explode(',', $data)), 'strlen');
-			}
+			$data = (is_array($data) !== true) ? explode(',', $data) : $data;
 
-			if (count($data = parent::Tick($data)) > 0)
+			if (count($data = parent::Tick(array_filter(array_map('trim', $data), 'strlen'))) > 0)
 			{
 				foreach ($data as $key => $value)
 				{
@@ -282,22 +273,19 @@ class phunction_DB_SQL extends phunction_DB
 		{
 			foreach (array('data', 'table') as $value)
 			{
-				if (is_array($$value) !== true)
-				{
-					$$value = array_filter(array_map('trim', explode(',', $$value)), 'strlen');
-				}
+				$$value = (is_array($$value) !== true) ? explode(',', $$value) : $$value;
 			}
 
-			if (count($data = parent::Tick($data)) > 0)
+			if (count($data = parent::Tick(array_filter(array_map('trim', $data), 'strlen'))) > 0)
 			{
 				$this->sql['query'] = sprintf('SELECT %s', implode(', ', $data));
 
-				if (count($table = parent::Tick($table)) >= 1)
+				if (count($table = parent::Tick(array_filter(array_map('trim', $table), 'strlen'))) >= 1)
 				{
 					$this->sql['query'] .= sprintf(' FROM %s', implode(', ', $table));
 				}
 
-				$this->sql['query'] = preg_replace('~(SELECT)~', '$1' . (($distinct === true) ? ' DISTINCT' : ''), $this->sql['query'], 1);
+				$this->sql['query'] = preg_replace('~^(SELECT)~', sprintf('%s', ($distinct === true) ? '$1 DISTINCT' : '$1'), $this->sql['query'], 1);
 			}
 		}
 
@@ -310,16 +298,13 @@ class phunction_DB_SQL extends phunction_DB
 
 		if (is_object(phunction::DB()) === true)
 		{
-			if (is_array($table) !== true)
-			{
-				$table = array_filter(array_map('trim', explode(',', $table)), 'strlen');
-			}
+			$table = (is_array($table) !== true) ? explode(',', $table) : $table;
 
-			if ((count($table = parent::Tick($table)) >= 1) && (count($data = array_map(array(phunction::DB(), 'quote'), $data)) > 0))
+			if ((count($table = parent::Tick(array_filter(array_map('trim', $table), 'strlen'))) >= 1) && (count($data) > 0))
 			{
 				foreach ($data as $key => $value)
 				{
-					$data[$key] = sprintf('%s = %s', parent::Tick($key), $value);
+					$data[$key] = sprintf('%s = %s', parent::Tick($key), parent::Quote($value));
 				}
 
 				$this->sql['query'] = sprintf('UPDATE %s SET %s', implode(', ', $table), implode(', ', $data));
@@ -335,16 +320,9 @@ class phunction_DB_SQL extends phunction_DB
 		{
 			$merge = array($merge, 'WHERE');
 
-			foreach ($data as $key => $value)
+			foreach (array_combine(parent::Tick(array_keys($data)), parent::Quote($data)) as $key => $value)
 			{
-				$key = parent::Tick($key);
-
-				if (is_object($value) === true)
-				{
-					$value = sprintf('(%s)', rtrim(strval($value), ';'));
-				}
-
-				else if (is_array($value = array_map(array(phunction::DB(), 'quote'), (array) $value)) === true)
+				if (is_array($value) === true)
 				{
 					if (preg_match('~\b(?:NOT\s+)?BETWEEN\b~i', $operator) > 0)
 					{
