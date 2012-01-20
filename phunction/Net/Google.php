@@ -233,25 +233,6 @@ class phunction_Net_Google extends phunction_Net
 		return (isset($id) === true) ? true : false;
 	}
 
-	public static function Translate($input, $output, $query = null)
-	{
-		$data = array
-		(
-			'langpair' => sprintf('%s|%s', $input, $output),
-			'q' => $query,
-			'v' => '1.0',
-		);
-
-		$headers = array(CURLOPT_USERAGENT => parent::Value($_SERVER, 'HTTP_USER_AGENT'));
-
-		if (($result = parent::CURL('http://ajax.googleapis.com/ajax/services/language/translate', $data, 'GET', null, $headers)) !== false)
-		{
-			return parent::Value(json_decode($result, true), array('responseData', 'translatedText'));
-		}
-
-		return false;
-	}
-
 	public static function Weather($query)
 	{
 		$weather = ph()->HTML->DOM(parent::CURL('http://www.google.com/ig/api', array('weather' => $query)));
