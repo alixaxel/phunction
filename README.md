@@ -1,4 +1,4 @@
-# phunction <small style="color: grey;">small and carefully designed PHP HMVC framework</small>
+# phunction - small and carefully designed PHP HMVC framework
 
 <hr />
 
