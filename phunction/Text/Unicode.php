@@ -7,7 +7,7 @@
 * Copyright (c) Alix Axel <alix.axel@gmail.com>
 **/
 
-class phunction_Unicode extends phunction
+class phunction_Text_Unicode extends phunction_Text
 {
 	public function __construct()
 	{
@@ -35,7 +35,7 @@ class phunction_Unicode extends phunction
 
 	public static function lcwords($string, $search = null)
 	{
-		return implode('', array_map('self::lcfirst', ph()->Text->Split($string, '[\s.!?¡¿' . preg_quote($search, '~') . ']+')));
+		return implode('', array_map('self::lcfirst', parent::Split($string, '[\s.!?¡¿' . preg_quote($search, '~') . ']+')));
 	}
 
 	public static function mb_html_entities($string)
@@ -107,7 +107,7 @@ class phunction_Unicode extends phunction
 	public static function stripos($string, $search, $offset = 0)
 	{
 		$string = self::substr($string, $offset);
-		$result = ph()->Text->Regex($string, preg_quote($search, '~'), array(0, 0, 1), 'iu', PREG_OFFSET_CAPTURE);
+		$result = parent::Regex($string, preg_quote($search, '~'), array(0, 0, 1), 'iu', PREG_OFFSET_CAPTURE);
 
 		if ($result !== false)
 		{
@@ -135,7 +135,7 @@ class phunction_Unicode extends phunction
 	public static function strpos($string, $search, $offset = 0)
 	{
 		$string = self::substr($string, $offset);
-		$result = ph()->Text->Regex($string, preg_quote($search, '~'), array(0, 0, 1), 'u', PREG_OFFSET_CAPTURE);
+		$result = parent::Regex($string, preg_quote($search, '~'), array(0, 0, 1), 'u', PREG_OFFSET_CAPTURE);
 
 		if ($result !== false)
 		{
@@ -213,7 +213,7 @@ class phunction_Unicode extends phunction
 
 	public static function ucwords($string, $search = null)
 	{
-		return implode('', array_map('self::ucfirst', ph()->Text->Split($string, '[\s.!?¡¿' . preg_quote($search, '~') . ']+')));
+		return implode('', array_map('self::ucfirst', parent::Split($string, '[\s.!?¡¿' . preg_quote($search, '~') . ']+')));
 	}
 }
 

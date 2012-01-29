@@ -49,7 +49,7 @@ class phunction_HTML extends phunction
 
 			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
 			{
-				return self::DOM(@simplexml_import_dom(DOMDocument::loadHTML(ph()->Unicode->mb_html_entities($html))), $xpath, $key, $default);
+				return self::DOM(@simplexml_import_dom(DOMDocument::loadHTML(ph()->Text->Unicode->mb_html_entities($html))), $xpath, $key, $default);
 			}
 		}
 
@@ -68,9 +68,9 @@ class phunction_HTML extends phunction
 
 	public static function Obfuscate($string, $reverse = false)
 	{
-		if (count($string = ph()->Unicode->str_split($string)) > 0)
+		if (count($string = ph()->Text->Unicode->str_split($string)) > 0)
 		{
-			foreach (array_map(array('phunction_Unicode', 'ord'), $string) as $key => $value)
+			foreach (array_map(array(ph()->Text->Unicode, 'ord'), $string) as $key => $value)
 			{
 				$string[$key] = sprintf('&#%s;', (mt_rand(0, 1) > 0) ? $value : ('x' . dechex($value)));
 			}
@@ -132,7 +132,7 @@ class phunction_HTML extends phunction
 
 			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
 			{
-				if (is_object($html = @DOMDocument::loadHTML(ph()->Unicode->mb_html_entities($html))) === true)
+				if (is_object($html = @DOMDocument::loadHTML(ph()->Text->Unicode->mb_html_entities($html))) === true)
 				{
 					if (is_array($whitelist) !== true)
 					{

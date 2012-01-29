@@ -435,7 +435,7 @@ class phunction_Disk extends phunction
 
 	public static function Tag($path = null, $tags = null, $fuzzy = true)
 	{
-		if (count($tags = array_filter(array_unique(array_map(array('phunction_Text', 'Slug'), (array) $tags)), 'strlen')) > 0)
+		if (count($tags = array_filter(array_unique(array_map(array(ph()->Text, 'Slug'), (array) $tags)), 'strlen')) > 0)
 		{
 			$tags = implode('+', parent::Sort($tags, true));
 

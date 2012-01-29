@@ -600,11 +600,11 @@ class phunction_Net extends phunction
 
 					if ($unicode === true)
 					{
-						$message = ph()->Unicode->str_split($message);
+						$message = ph()->Text->Unicode->str_split($message);
 
 						foreach ($message as $key => $value)
 						{
-							$message[$key] = sprintf('%04x', ph()->Unicode->ord($value));
+							$message[$key] = sprintf('%04x', ph()->Text->Unicode->ord($value));
 						}
 
 						$message = implode('', $message);

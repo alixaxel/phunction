@@ -165,12 +165,12 @@ class phunction_Text extends phunction
 		$regex = array
 		(
 			'~\s+~' => ' ',
-			'~\b([DO]\'|Fitz|Ma?c)([^\b]+)\b~ei' => 'stripslashes("$1" . phunction_Unicode::ucfirst("$2"))',
-			'~\b(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|v[ao]n|vel|vit)\b~ei' => 'phunction_Unicode::strtolower("$0")',
-			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|$)~ei' => 'phunction_Unicode::strtoupper("$0")',
+			'~\b([DO]\'|Fitz|Ma?c)([^\b]+)\b~ei' => 'stripslashes("$1" . ph()->Text->Unicode->ucfirst("$2"))',
+			'~\b(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|v[ao]n|vel|vit)\b~ei' => 'ph()->Text->Unicode->strtolower("$0")',
+			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|$)~ei' => 'ph()->Text->Unicode->strtoupper("$0")',
 		);
 
-		$string = preg_replace(array_keys($regex), $regex, ph()->Unicode->ucwords(ph()->Unicode->strtolower(trim($string)), "'-"));
+		$string = preg_replace(array_keys($regex), $regex, ph()->Text->Unicode->ucwords(ph()->Text->Unicode->strtolower(trim($string)), "'-"));
 
 		if (is_int($limit) === true)
 		{
@@ -244,15 +244,15 @@ class phunction_Text extends phunction
 
 		foreach (preg_grep('~[&@0-9]|\p{L}\p{Lu}|[\p{L}\p{Nd}]{3,}[.][\p{L}\p{Nd}]{2,}]~u', $string, PREG_GREP_INVERT) as $key => $value)
 		{
-			$string[$key] = preg_replace('~\p{L&}~eu', 'stripslashes(phunction_Unicode::strtoupper("$0"))', $value, 1);
+			$string[$key] = preg_replace('~\p{L&}~eu', 'stripslashes(ph()->Text->Unicode->strtoupper("$0"))', $value, 1);
 		}
 
 		if (strlen(implode('', $string)) > 0)
 		{
 			$regex = array
 			(
-				'~(?<!^|["&.\'\p{Pi}\p{Ps}])\b(' . $except . ')(?:[.]|\b)(?!$|[!"&.?\'\p{Pe}\p{Pf}])~eiu' => 'stripslashes(phunction_Unicode::strtolower("$0"))',
-				'~([!.:;?]\s+)\b(' . $except . ')\b~eu' => 'stripslashes("$1" . phunction_Unicode::ucfirst("$2"))',
+				'~(?<!^|["&.\'\p{Pi}\p{Ps}])\b(' . $except . ')(?:[.]|\b)(?!$|[!"&.?\'\p{Pe}\p{Pf}])~eiu' => 'stripslashes(ph()->Text->Unicode->strtolower("$0"))',
+				'~([!.:;?]\s+)\b(' . $except . ')\b~eu' => 'stripslashes("$1" . ph()->Text->Unicode->ucfirst("$2"))',
 			);
 
 			$string = preg_replace(array_keys($regex), $regex, implode('', $string));
@@ -263,7 +263,7 @@ class phunction_Text extends phunction
 
 	public static function Truncate($string, $limit, $more = '...')
 	{
-		if (ph()->Unicode->strlen($string = trim($string)) > $limit)
+		if (ph()->Text->Unicode->strlen($string = trim($string)) > $limit)
 		{
 			return preg_replace('~^(.{1,' . $limit . '}(?<=\S)(?=\s)|.{' . $limit . '}).*$~su', '$1', $string) . $more;
 		}

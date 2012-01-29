@@ -1,4 +1,6 @@
-# phunction - small and carefully designed PHP HMVC framework
+# phunction <small style="color: grey;">small and carefully designed PHP HMVC framework</small>
+
+<hr />
 
 ## Usage:
 
@@ -18,11 +20,13 @@
    * Math
    * Net
       * Akismet
-      * Amazon
-      * Facebook
+      * *Amazon **
+      * *Facebook **
       * Google
       * PayPal
-      * Twitter
-      * Yahoo
+      * *Twitter **
+      * *Yahoo **
    * Text
-   * Unicode
+      * Unicode
+
+** - Planned / Under Development*
