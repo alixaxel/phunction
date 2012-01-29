@@ -20,13 +20,13 @@
    * Math
    * Net
       * Akismet
-      * *Amazon **
-      * *Facebook **
+      * Amazon *
+      * Facebook *
       * Google
       * PayPal
-      * *Twitter **
-      * *Yahoo **
+      * Twitter *
+      * Yahoo *
    * Text
       * Unicode
 
-** - Planned / Under Development*
+* - Planned / Under Development
