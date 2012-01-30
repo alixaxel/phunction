@@ -110,9 +110,17 @@ class phunction_Net extends phunction
 
 					else if (preg_match('~^(?:POST|PUT)$~i', $method) > 0)
 					{
-						if ((is_array($data) === true) && ((count($data) != count($data, COUNT_RECURSIVE)) || (count(preg_grep('~^@~', $data)) == 0)))
+						if (is_array($data) === true)
 						{
-							$data = http_build_query($data, '', '&');
+							foreach (preg_grep('~^@~', $data) as $key => $value)
+							{
+								$data[$key] = sprintf('@%s', ph()->Disk->Path(ltrim($value, '@')));
+							}
+
+							if (count($data) != count($data, COUNT_RECURSIVE))
+							{
+								$data = http_build_query($data, '', '&');
+							}
 						}
 
 						curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
