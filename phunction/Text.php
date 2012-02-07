@@ -235,6 +235,11 @@ class phunction_Text extends phunction
 
 	public static function Slug($string, $slug = '-', $extra = null)
 	{
+		if (extension_loaded('intl') === true)
+		{
+			$string = Normalizer::normalize($string, Normalizer::FORM_KD);
+		}
+
 		return strtolower(trim(preg_replace('~[^0-9a-z' . preg_quote($extra, '~') . ']+~i', $slug, self::Unaccent($string)), $slug));
 	}
 
