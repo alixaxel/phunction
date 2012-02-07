@@ -13,6 +13,11 @@ class phunction_Text extends phunction
 	{
 	}
 
+	public function __get($key)
+	{
+		return $this->$key = parent::__get(sprintf('%s_%s', ltrim(strrchr(__CLASS__, '_'), '_'), $key));
+	}
+
 	public static function Comify($array, $last = ' and ')
 	{
 		if (count($array = array_filter(array_unique((array) $array), 'strlen')) >= 3)
