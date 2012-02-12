@@ -224,41 +224,40 @@ class phunction_Net extends phunction
 			{
 				if (is_array($$email) !== true)
 				{
-					$$email = explode(',', $$email);
+					$$email = array_map('trim', explode(',', $$email));
 				}
 
-				$$email = array_filter(filter_var_array(preg_replace('~\s|[<>]|%0[ab]|[[:cntrl:]]~i', '', $$email), FILTER_VALIDATE_EMAIL));
+				$$email = array_change_key_case(($$email === array_values($$email)) ? array_flip($$email) : $$email, CASE_LOWER);
 
-				if (count($$email) > 0)
+				if (count($$email = array_intersect_key($$email, array_flip(array_filter(array_keys($$email), array(ph()->Is, 'Email'))))) > 0)
 				{
 					$header[ucfirst($email)] = array();
 
 					foreach ($$email as $key => $value)
 					{
-						$key = preg_replace('~%0[ab]|[[:cntrl:]]~i', '', $key);
-						$value = (is_array($value) === true) ? $value : explode('@', $value);
+						$key = explode('@', $key);
 
-						if (preg_match('~[^\x20-\x7E]~', $key) > 0)
+						if (preg_match('~[^\x20-x7E]~', $value = preg_replace('~^\d+$|[[:cntrl:]]~', '', $value)) > 0)
 						{
-							$key = '=?UTF-8?B?' . base64_encode($key) . '?=';
+							$value = sprintf('=?UTF-8?B?%s?=', base64_encode($value));
 						}
 
-						$header[ucfirst($email)][] = imap_rfc822_write_address($value[0], $value[1], preg_replace('~^\d+$~', '', $key));
+						$header[ucfirst($email)][] = imap_rfc822_write_address($key[0], $key[1], $value);
 					}
 				}
 			}
 
-			if (count($from) * (count($to) + count($cc) + count($bcc)) > 0)
+			if (count($from) * count($recipients = array_keys(array_merge($to, $cc, $bcc))) > 0)
 			{
 				$header['Sender'] = $header['Reply-To'] = $header['From'][0];
-				$header['Subject'] = preg_replace('~%0[ab]|[[:cntrl:]]~i', '', $subject);
-				$header['Return-Path'] = sprintf('<%s>', implode('', array_slice($from, 0, 1)));
+				$header['Subject'] = preg_replace('~[[:cntrl:]]~', '', $subject);
+				$header['Return-Path'] = sprintf('<%s>', key(array_slice($from, 0, 1)));
 				$header['Content-Type'] = sprintf('multipart/alternative; boundary="%s"', $boundary);
 
-				if (array_sum(array(count($to), count($cc), count($bcc))) == 1)
+				if (count($recipients) == 1)
 				{
 					$count = 0;
-					$hashcash = sprintf('1:20:%u:%s::%u:', parent::Date('ymd'), parent::Coalesce($to, $cc, $bcc), mt_rand());
+					$hashcash = sprintf('1:20:%u:%s::%u', parent::Date('ymd'), parent::Coalesce($recipients), mt_rand());
 
 					while (strncmp('00000', sha1($hashcash . $count), 5) !== 0)
 					{
@@ -270,16 +269,11 @@ class phunction_Net extends phunction
 
 				foreach (array_fill_keys(array('plain', 'html'), trim(str_replace("\r", '', $message))) as $key => $value)
 				{
-					if ($key == 'html')
+					if ($key == 'plain')
 					{
-						$value = trim(imap_binary($value));
-					}
+						$value = preg_replace('~.*<body(?:\s[^>]*)?>(.+?)</body>.*~is', '$1', $value);
 
-					else if ($key == 'plain')
-					{
-						$value = strip_tags(preg_replace('~.*<body(?:\s[^>]*)?>(.+?)</body>.*~is', '$1', $value), '<a><p><br><li>');
-
-						if (preg_match('~</?[a-z][^>]*>~i', $value) > 0)
+						if (preg_match('~</?[a-z][^>]*>~i', $value = strip_tags($value, '<a><p><br><li>')) > 0)
 						{
 							$regex = array
 							(
@@ -287,7 +281,6 @@ class phunction_Net extends phunction
 								'~<p[^>]*>(.+?)</p>~is' => "\n\n$1\n\n",
 								'~<br[^>]*>~i' => "\n",
 								'~<li[^>]*>(.+?)</li>~is' => "\n - $1",
-								'~\n{3,}~' => "\n\n",
 							);
 
 							$value = strip_tags(preg_replace(array_keys($regex), $regex, $value));
@@ -296,61 +289,82 @@ class phunction_Net extends phunction
 						$value = implode("\n", array_map('imap_8bit', explode("\n", preg_replace('~\n{3,}~', "\n\n", trim($value)))));
 					}
 
+					else if ($key == 'html')
+					{
+						$value = trim(imap_binary($value));
+					}
+
 					$value = array
 					(
 						sprintf('Content-Type: text/%s; charset=utf-8', $key),
-						'Content-Disposition: inline',
-						sprintf('Content-Transfer-Encoding: %s', ($key == 'html') ? 'base64' : 'quoted-printable'),
+						sprintf('Content-Disposition: %s', 'inline'),
+						sprintf('Content-Transfer-Encoding: %s', ($key == 'plain') ? 'quoted-printable' : 'base64'),
 						'', $value, '',
 					);
 
-					$content = array_merge($content, array('--' . $boundary), $value);
+					$content = array_merge($content, array(sprintf('--%s', $boundary)), $value);
 				}
 
-				$content[] = '--' . $boundary . '--';
+				$content[] = sprintf('--%s--', $boundary);
 
-				if (isset($attachments) === true)
+				if (count($attachments = (array) $attachments) > 0)
 				{
-					$boundary = str_rot13($boundary);
-					$attachments = array_filter((array) $attachments, 'is_file');
+					$attachments = ($attachments === array_values($attachments)) ? array_flip($attachments) : $attachments;
 
-					if (count($attachments) > 0)
+					if (count($attachments = array_intersect_key($attachments, array_flip(array_filter(array_keys($attachments), 'is_file')))) > 0)
 					{
-						array_unshift($content, '--' . $boundary, 'Content-Type: ' . $header['Content-Type'], '');
-
-						foreach ($attachments as $key => $value)
+						if (array_unshift($content, sprintf('--%s', $boundary = str_rot13($boundary)), sprintf('Content-Type: %s', $header['Content-Type']), '') == 3)
 						{
-							$key = (is_int($key) === true) ? basename($value) : $key;
+							$header['Content-Type'] = sprintf('multipart/mixed; boundary="%s"', $boundary);
 
-							if (preg_match('~[^\x20-\x7E]~', $key) > 0)
+							foreach ($attachments as $key => $value)
 							{
-								$key = '=?UTF-8?B?' . base64_encode($key) . '?=';
+								if (is_int($value) === true)
+								{
+									$value = basename($key);
+								}
+
+								if (preg_match('~[^\x20-x7E]~', $value) > 0)
+								{
+									$value = sprintf('=?UTF-8?B?%s?=', base64_encode($value));
+								}
+
+								$value = array
+								(
+									sprintf('Content-Type: application/%s; name="%s"', 'octet-stream', $value),
+									sprintf('Content-Disposition: %s; filename="%s"', 'attachment', $value),
+									sprintf('Content-Transfer-Encoding: %s', 'base64'),
+									'', trim(imap_binary(file_get_contents($key))), '',
+								);
+
+								$content = array_merge($content, array(sprintf('--%s', $boundary)), $value);
 							}
 
-							$value = array
-							(
-								sprintf('Content-Type: application/octet-stream; name="%s"', $key),
-								sprintf('Content-Disposition: attachment; filename="%s"', $key),
-								'Content-Transfer-Encoding: base64',
-								'', trim(imap_binary(file_get_contents($value))), '',
-							);
-
-							$content = array_merge($content, array('--' . $boundary), $value);
+							$content[] = sprintf('--%s--', $boundary);
 						}
-
-						$header['Content-Type'] = sprintf('multipart/mixed; boundary="%s"', $boundary);
-						$content[] = '--' . $boundary . '--';
 					}
 				}
 
 				foreach ($header as $key => $value)
 				{
-					$value = (is_array($value) === true) ? implode(', ', $value) : $value;
-					$header[$key] = iconv_mime_encode($key, $value, array('scheme' => 'Q', 'input-charset' => 'UTF-8', 'output-charset' => 'UTF-8'));
-
-					if ($header[$key] === false)
+					if (is_array($value) === true)
 					{
-						$header[$key] = iconv_mime_encode($key, $value, array('scheme' => 'B', 'input-charset' => 'UTF-8', 'output-charset' => 'UTF-8'));
+						$value = implode(', ', $value);
+					}
+
+					foreach (array('Q', 'B') as $option)
+					{
+						$options = array
+						(
+							'scheme' => $option,
+							'input-charset' => 'UTF-8',
+							'output-charset' => 'UTF-8',
+						);
+
+						if (($header[$key] = iconv_mime_encode($key, $value, $options)) !== false)
+						{
+							break;
+						}
 					}
 
 					if (preg_match('~^[\x20-\x7E]*$~', $value) > 0)
@@ -365,25 +379,24 @@ class phunction_Net extends phunction
 
 					if (is_resource($stream = stream_socket_client($smtp)) === true)
 					{
-						$data = array('HELO ' . parent::Value($_SERVER, 'HTTP_HOST', 'localhost'));
-						$result .= substr(ltrim(fread($stream, 8192)), 0, 3);
+						$data = array(sprintf('HELO %s', parent::Value($_SERVER, 'HTTP_HOST', 'localhost')));
 
-						if (preg_match('~^220~', $result) > 0)
+						if (preg_match('~^220~', $result .= substr(ltrim(fread($stream, 8192)), 0, 3)) > 0)
 						{
 							if (count($auth = array_slice(func_get_args(), 8, 2)) == 2)
 							{
 								$data = array_merge($data, array('AUTH LOGIN'), array_map('base64_encode', $auth));
 							}
 
-							$data[] = sprintf('MAIL FROM: <%s>', implode('', array_slice($from, 0, 1)));
+							$data[] = sprintf('MAIL FROM: <%s>', key(array_slice($from, 0, 1)));
 
-							foreach (array_merge(array_values($to), array_values($cc), array_values($bcc)) as $value)
+							foreach ($recipients as $value)
 							{
 								$data[] = sprintf('RCPT TO: <%s>', $value);
 							}
 
 							$data[] = 'DATA';
-							$data[] = implode("\r\n", array_merge(array_diff_key($header, array('Bcc' => true)), array(''), $content, array('.')));
+							$data[] = implode("\r\n", array_merge(array_diff_key($header, array('Bcc' => null)), array(''), $content, array('.')));
 							$data[] = 'QUIT';
 
 							while (preg_match('~^220(?>250(?>(?>334){1,2}(?>235)?)?(?>(?>250){1,}(?>354(?>250)?)?)?)?$~', $result) > 0)
