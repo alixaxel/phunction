@@ -313,7 +313,7 @@ class phunction_Net extends phunction
 
 					if (count($attachments = array_intersect_key($attachments, array_flip(array_filter(array_keys($attachments), 'is_file')))) > 0)
 					{
-						if (array_unshift($content, sprintf('--%s', $boundary = str_rot13($boundary)), sprintf('Content-Type: %s', $header['Content-Type']), '') == 3)
+						if (array_unshift($content, sprintf('--%s', $boundary = str_rot13($boundary)), sprintf('Content-Type: %s', $header['Content-Type']), '') > 3)
 						{
 							$header['Content-Type'] = sprintf('multipart/mixed; boundary="%s"', $boundary);
 
