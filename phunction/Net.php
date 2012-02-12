@@ -468,12 +468,10 @@ class phunction_Net extends phunction
 
 		if (($verify === true) && (array_key_exists('openid_mode', $_REQUEST) === true))
 		{
-			$result = parent::Value($_REQUEST, 'openid_claimed_id', parent::Value($_REQUEST, 'openid_identity'));
+			$id = parent::Value($_REQUEST, 'openid_claimed_id', parent::Value($_REQUEST, 'openid_identity'));
 
-			if ((strcmp('id_res', parent::Value($_REQUEST, 'openid_mode')) === 0) && (ph()->Is->URL($result) === true))
+			if ((strcmp('id_res', parent::Value($_REQUEST, 'openid_mode')) === 0) && (ph()->Is->URL($id) === true))
 			{
-				$data['openid.mode'] = 'check_authentication';
-
 				foreach (array('ns', 'sig', 'signed', 'assoc_handle') as $key)
 				{
 					$data['openid.' . $key] = parent::Value($_REQUEST, 'openid_' . $key);
@@ -487,7 +485,16 @@ class phunction_Net extends phunction
 					}
 				}
 
-				return (preg_match('~is_valid\s*:\s*true~', self::CURL(self::OpenID($result, false, false, false), array_filter($data, 'is_string'), 'POST')) > 0) ? $result : false;
+				$data['openid.mode'] = 'check_authentication';
+
+				if (preg_match('~is_valid\s*:\s*true~', self::CURL(self::OpenID($id, false, false, false), array_filter($data, 'is_string'), 'POST')) > 0)
+				{
+					return array
+					(
+						'id' => $id,
+						'email' => implode('', array_intersect_key($_REQUEST, array_flip(preg_grep('~^openid_[^_]+_(?:value_contact_)?email$~', array_keys($_REQUEST))))),
+					);
+				}
 			}
 		}
 
@@ -537,15 +544,21 @@ class phunction_Net extends phunction
 							$data['openid.mode'] = 'checkid_setup';
 							$data['openid.identity'] = $delegate;
 							$data['openid.return_to'] = parent::URL($return, null, null);
+							$data['openid.ns.sreg'] = 'http://openid.net/extensions/sreg/1.1';
+							$data['openid.sreg.required'] = 'email';
 
-							if ($key === 0)
+							if ($key == 0)
 							{
 								$data['openid.ns'] = 'http://specs.openid.net/auth/2.0';
 								$data['openid.realm'] = parent::URL($realm, false, false);
 								$data['openid.claimed_id'] = $delegate;
+								$data['openid.ns.ax'] = 'http://openid.net/srv/ax/1.0';
+								$data['openid.ax.mode'] = 'fetch_request';
+								$data['openid.ax.required'] = 'contact_email';
+								$data['openid.ax.type.contact_email'] = 'http://axschema.org/contact/email';
 							}
 
-							else if ($key === 1)
+							else if ($key == 1)
 							{
 								$data['openid.trust_root'] = parent::URL($realm, false, false);
 							}
