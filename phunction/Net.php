@@ -379,7 +379,7 @@ class phunction_Net extends phunction
 
 					if (is_resource($stream = stream_socket_client($smtp)) === true)
 					{
-						$data = array(sprintf('HELO %s', parent::Value($_SERVER, 'HTTP_HOST', 'localhost')));
+						$data = array(sprintf('EHLO %s', parent::Value($_SERVER, 'HTTP_HOST', 'localhost')));
 
 						if (preg_match('~^220~', $result .= substr(ltrim(fread($stream, 8192)), 0, 3)) > 0)
 						{
