@@ -209,6 +209,7 @@ class phunction_Net extends phunction
 	public static function Email($to, $from, $subject, $message, $cc = null, $bcc = null, $attachments = null, $smtp = null)
 	{
 		$content = array();
+		$hostname = parent::Value($_SERVER, 'HTTP_HOST', 'localhost');
 		$boundary = sprintf('=%s=', rtrim(base64_encode(uniqid()), '='));
 
 		if (extension_loaded('imap') === true)
@@ -216,7 +217,7 @@ class phunction_Net extends phunction
 			$header = array
 			(
 				'Date' => parent::Date('r'),
-				'Message-ID' => sprintf('<%s@%s>', md5(microtime(true)), parent::Value($_SERVER, 'HTTP_HOST', 'localhost')),
+				'Message-ID' => sprintf('<%s@%s>', md5(microtime(true)), $hostname),
 				'MIME-Version' => '1.0',
 			);
 
@@ -375,51 +376,53 @@ class phunction_Net extends phunction
 
 				if (isset($smtp) === true)
 				{
-					$result = null;
+					$data = array(sprintf('HELO %s', $hostname));
 
-					if (is_resource($stream = stream_socket_client($smtp)) === true)
+					if ((is_resource($stream = stream_socket_client($smtp)) === true) && (preg_match('~^220~', $result = ltrim(fread($stream, 8192))) > 0))
 					{
-						$data = array(sprintf('EHLO %s', parent::Value($_SERVER, 'HTTP_HOST', 'localhost')));
-
-						if (preg_match('~^220~', $result .= substr(ltrim(fread($stream, 8192)), 0, 3)) > 0)
+						if (preg_match('~\bESMTP\b~i', $result) > 0)
 						{
-							if (count($auth = array_slice(func_get_args(), 8, 2)) == 2)
+							$data = array(sprintf('EHLO %s', $hostname));
+						}
+
+						if (count($auth = array_slice(func_get_args(), 8, 2)) == 2)
+						{
+							$data = array_merge($data, array('AUTH LOGIN'), array_map('base64_encode', $auth));
+						}
+
+						$data[] = sprintf('MAIL FROM: <%s>', key(array_slice($from, 0, 1)));
+
+						foreach ($recipients as $value)
+						{
+							$data[] = sprintf('RCPT TO: <%s>', $value);
+						}
+
+						$data[] = 'DATA';
+						$data[] = implode("\r\n", array_merge(array_diff_key($header, array('Bcc' => null)), array(''), $content, array('.')));
+						$data[] = 'QUIT';
+
+						$result = substr($result, 0, 3);
+
+						while (preg_match('~^220(?>250(?>(?>334){1,2}(?>235)?)?(?>(?>250){1,}(?>354(?>250)?)?)?)?$~', $result) > 0)
+						{
+							if (fwrite($stream, array_shift($data) . "\r\n") !== false)
 							{
-								$data = array_merge($data, array('AUTH LOGIN'), array_map('base64_encode', $auth));
+								$result .= substr(ltrim(fread($stream, 8192)), 0, 3);
 							}
+						}
 
-							$data[] = sprintf('MAIL FROM: <%s>', key(array_slice($from, 0, 1)));
-
-							foreach ($recipients as $value)
+						if (count($data) > 0)
+						{
+							if (fwrite($stream, array_pop($data) . "\r\n") !== false)
 							{
-								$data[] = sprintf('RCPT TO: <%s>', $value);
-							}
-
-							$data[] = 'DATA';
-							$data[] = implode("\r\n", array_merge(array_diff_key($header, array('Bcc' => null)), array(''), $content, array('.')));
-							$data[] = 'QUIT';
-
-							while (preg_match('~^220(?>250(?>(?>334){1,2}(?>235)?)?(?>(?>250){1,}(?>354(?>250)?)?)?)?$~', $result) > 0)
-							{
-								if (fwrite($stream, array_shift($data) . "\r\n") !== false)
-								{
-									$result .= substr(ltrim(fread($stream, 8192)), 0, 3);
-								}
-							}
-
-							if (count($data) > 0)
-							{
-								if (fwrite($stream, array_pop($data) . "\r\n") !== false)
-								{
-									$result .= substr(ltrim(fread($stream, 8192)), 0, 3);
-								}
+								$result .= substr(ltrim(fread($stream, 8192)), 0, 3);
 							}
 						}
 
 						fclose($stream);
 					}
 
-					return (preg_match('~221$~', $result) > 0) ? true : false;
+					return ((count($data) == 0) && (preg_match('~221$~', $result) > 0)) ? true : false;
 				}
 
 				return @mail(null, substr($header['Subject'], 9), implode("\n", $content), implode("\r\n", array_diff_key($header, array('Subject' => true))));
