@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.2.7 (github.com/alixaxel/phunction/)
+* phunction 2.2.26 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -15,9 +15,7 @@ class phunction
 	public function __construct()
 	{
 		ob_start();
-		set_time_limit(0);
 		error_reporting(-1);
-		ignore_user_abort(true);
 		date_default_timezone_set('GMT');
 
 		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
@@ -261,7 +259,7 @@ class phunction
 		return rtrim($result, "\n");
 	}
 
-	public static function Filter($data, $control = true, $encoding = 'UTF-8')
+	public static function Filter($data, $control = true, $encoding = null)
 	{
 		if (is_array($data) === true)
 		{
@@ -277,17 +275,17 @@ class phunction
 
 		else if (is_string($data) === true)
 		{
-			if (function_exists('mb_detect_encoding') === true)
+			if (preg_match('~[^\x00-\x7F]~', $data) > 0)
 			{
-				$encoding = mb_detect_encoding($data, 'auto');
+				if (function_exists('mb_detect_encoding') === true)
+				{
+					$encoding = mb_detect_encoding($data, 'auto');
+				}
+
+				$data = @iconv((empty($encoding) === true) ? 'UTF-8' : $encoding, 'UTF-8//IGNORE', $data);
 			}
 
-			if (($data = @iconv(($encoding === false) ? 'UTF-8' : $encoding, 'UTF-8//IGNORE', $data)) !== false)
-			{
-				return ($control === true) ? preg_replace('~\p{C}+~u', '', $data) : preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $data);
-			}
-
-			return false;
+			return ($control === true) ? preg_replace('~\p{C}+~u', '', $data) : preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $data);
 		}
 
 		return $data;
@@ -706,7 +704,7 @@ class phunction
 
 	public static function Voodoo($data)
 	{
-		if ((version_compare(PHP_VERSION, '6.0.0', '<') === true) && (get_magic_quotes_gpc() === 1))
+		if ((version_compare(PHP_VERSION, '5.4.0', '<') === true) && (get_magic_quotes_gpc() === 1))
 		{
 			if (is_array($data) === true)
 			{
