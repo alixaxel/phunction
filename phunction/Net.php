@@ -374,16 +374,18 @@ class phunction_Net extends phunction
 					}
 				}
 
-				if (isset($smtp) === true)
+				if ((isset($smtp) === true) && (is_resource($stream = stream_socket_client($smtp)) === true))
 				{
-					$data = array(sprintf('HELO %s', $hostname));
-
-					if ((is_resource($stream = stream_socket_client($smtp)) === true) && (preg_match('~^220~', $result = ltrim(fread($stream, 8192))) > 0))
+					if (preg_match('~^220~', $result = ltrim(fread($stream, 8192))) > 0)
 					{
+						$data = array(sprintf('HELO %s', $hostname));
+
 						if (preg_match('~\bESMTP\b~i', $result) > 0)
 						{
 							$data = array(sprintf('EHLO %s', $hostname));
 						}
+
+						$result = substr($result, 0, 3);
 
 						if (count($auth = array_slice(func_get_args(), 8, 2)) == 2)
 						{
@@ -400,8 +402,6 @@ class phunction_Net extends phunction
 						$data[] = 'DATA';
 						$data[] = implode("\r\n", array_merge(array_diff_key($header, array('Bcc' => null)), array(''), $content, array('.')));
 						$data[] = 'QUIT';
-
-						$result = substr($result, 0, 3);
 
 						while (preg_match('~^220(?>250(?>(?>334){1,2}(?>235)?)?(?>(?>250){1,}(?>354(?>250)?)?)?)?$~', $result) > 0)
 						{
