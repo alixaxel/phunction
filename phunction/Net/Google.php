@@ -33,6 +33,29 @@ class phunction_Net_Google extends phunction_Net
 		return false;
 	}
 
+	public static function Closure($input, $output, $chmod = null, $ttl = 3600)
+	{
+		$data = array
+		(
+			'code_url' => (ph()->Is->URL($input) === true) ? $input : ph()->URL(null, $input),
+			'compilation_level' => 'SIMPLE_OPTIMIZATIONS',
+			'output_format' => 'json',
+			'output_info' => 'compiled_code',
+		);
+		
+		if (($result = parent::CURL('http://closure-compiler.appspot.com/compile', $data, 'POST')) !== false)
+		{
+			if ((isset($output) === true) && (($result = parent::Value(json_decode($result, true), 'compiledCode')) !== false))
+			{
+				$result = ph()->Disk->File($output, $result, false, $chmod, $ttl);
+			}
+
+			return $result;
+		}
+
+		return false;
+	}
+
 	public static function Distance($input, $output, $mode = null, $avoid = null, $units = null)
 	{
 		$data = array
