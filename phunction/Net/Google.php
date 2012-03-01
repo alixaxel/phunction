@@ -33,24 +33,38 @@ class phunction_Net_Google extends phunction_Net
 		return false;
 	}
 
-	public static function Closure($input, $output, $chmod = null, $ttl = 3600)
+	public static function Closure($input, $type = null, $output = null, $chmod = null, $ttl = 3600)
 	{
-		$data = array
-		(
-			'code_url' => (ph()->Is->URL($input) === true) ? $input : ph()->URL(null, $input),
-			'compilation_level' => 'SIMPLE_OPTIMIZATIONS',
-			'output_format' => 'json',
-			'output_info' => 'compiled_code',
-		);
-		
-		if (($result = parent::CURL('http://closure-compiler.appspot.com/compile', $data, 'POST')) !== false)
+		if (isset($input) === true)
 		{
-			if ((isset($output) === true) && (($result = parent::Value(json_decode($result, true), 'compiledCode')) !== false))
+			$data = array
+			(
+				'compilation_level' => 'SIMPLE_OPTIMIZATIONS',
+				'output_format' => 'json',
+				'output_info' => 'compiled_code',
+			);
+
+			if (strcasecmp($type, 'ADVANCED') === 0)
 			{
-				$result = ph()->Disk->File($output, $result, false, $chmod, $ttl);
+				$data['compilation_level'] = 'ADVANCED_OPTIMIZATIONS';
 			}
 
-			return $result;
+			$data = http_build_query($data, '', '&');
+
+			foreach ((array) $input as $value)
+			{
+				$data .= sprintf('&code_url=%s', urlencode((ph()->Is->URL($value) === true) ? $value : ph()->URL(null, $value)));
+			}
+
+			if (($result = parent::CURL('http://closure-compiler.appspot.com/compile', $data, 'POST')) !== false)
+			{
+				if ((isset($output) === true) && (($result = parent::Value(json_decode($result, true), 'compiledCode')) !== false))
+				{
+					$result = ph()->Disk->File($output, $result, false, $chmod, $ttl);
+				}
+
+				return $result;
+			}
 		}
 
 		return false;
