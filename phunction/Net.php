@@ -580,7 +580,7 @@ class phunction_Net extends phunction
 
 	public static function Reducisaurus($input, $type = null, $output = null, $chmod = null, $ttl = 3600)
 	{
-		if (isset($input, $type) === true)
+		if (isset($input) === true)
 		{
 			$data = array_fill_keys(array('max-age', 'expire_urls'), intval($ttl));
 
