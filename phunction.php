@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.2.26 (github.com/alixaxel/phunction/)
+* phunction 2.3.7 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -664,6 +664,11 @@ class phunction
 	{
 		if (isset($key) === true)
 		{
+			if (is_array($key) !== true)
+			{
+				$key = explode('.', $key);
+			}
+
 			foreach ((array) $key as $value)
 			{
 				$data = (is_object($data) === true) ? get_object_vars($data) : $data;
