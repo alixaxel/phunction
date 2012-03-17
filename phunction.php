@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.3.7 (github.com/alixaxel/phunction/)
+* phunction 2.3.17 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -220,6 +220,30 @@ class phunction
 
 			echo $result . "\n";
 		}
+	}
+
+	public static function Event($id, $callback = null)
+	{
+		static $events = array();
+
+		if ($callback === true)
+		{
+			$result = array();
+
+			foreach (self::Value($events, $id, array()) as $key => $value)
+			{
+				$result[$key] = call_user_func_array($value, array_slice(func_get_args(), 2));
+			}
+
+			return $result;
+		}
+
+		else if (is_callable($callback) === true)
+		{
+			$events[$id][] = $callback;
+		}
+
+		return count(self::Value($events, $id, null));
 	}
 
 	public static function Export($name, $data)
