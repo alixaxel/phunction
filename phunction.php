@@ -171,8 +171,8 @@ class phunction
 		{
 			try
 			{
-                $auth = array_slice(func_get_args(), 1, 2);
-                $db[self::$id] = new PDO(preg_replace('~^([^:]+):/{0,2}([^:/]+)(?::(\d+))?/(\w+)/?$~', '$1:host=$2;port=$3;dbname=$4', $query), array_shift($auth), array_shift($auth));
+				$auth = array_slice(func_get_args(), 1, 2);
+				$db[self::$id] = new PDO(preg_replace('~^([^:]+):/{0,2}([^:/]+)(?::(\d+))?/(\w+)/?$~', '$1:host=$2;port=$3;dbname=$4', $query), array_shift($auth), array_shift($auth));
 
 				if (strcmp('mysql', $db[self::$id]->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
 				{
