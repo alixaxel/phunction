@@ -15,14 +15,8 @@
 		"php": ">=5.2.0"
 	},
 	"keywords": [
-		"auth",
-		"cache",
-		"checksum",
-		"classification",
 		"database",
-		"db",
 		"email",
-		"encryption",
 		"event",
 		"framework",
 		"hmvc",
@@ -31,17 +25,11 @@
 		"image",
 		"math",
 		"mvc",
-		"net",
 		"openid",
 		"paypal",
 		"rest",
 		"route",
-		"router",
-		"routing",
 		"slug",
-		"sms",
-		"smtp",
-		"sql",
-		"validation"
+		"sql"
 	]
 }
