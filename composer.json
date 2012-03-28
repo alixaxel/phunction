@@ -1,0 +1,47 @@
+{
+	"name": "phunction/phunction",
+	"type": "framework",
+	"version": "2.4.0",
+	"homepage": "https://github.com/alixaxel/phunction/",
+	"description": "carefully designed PHP 5.2+ HMVC framework",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Alix Axel",
+			"email": "alix.axel@gmail.com"
+		}
+	],
+	"require": {
+		"php": ">=5.2.0"
+	},
+	"keywords": [
+		"auth",
+		"cache",
+		"checksum",
+		"classification",
+		"database",
+		"db",
+		"email",
+		"encryption",
+		"event",
+		"framework",
+		"hmvc",
+		"html",
+		"i18n",
+		"image",
+		"math",
+		"mvc",
+		"net",
+		"openid",
+		"paypal",
+		"rest",
+		"route",
+		"router",
+		"routing",
+		"slug",
+		"sms",
+		"smtp",
+		"sql",
+		"validation"
+	]
+}

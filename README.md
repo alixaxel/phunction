@@ -1,10 +1,10 @@
-# phunction - carefully designed PHP HMVC framework
+# phunction - carefully designed PHP 5.2+ HMVC framework
 
 <hr />
 
 ## Usage:
 
-	ph()->[{[{Sub}->]*Class}->]{Method}($arguments);
+	ph([$id])->[{[{Sub}->]*Class}->]{Method}($arguments);
 
 ## Classes:
 
@@ -30,3 +30,7 @@
       * Unicode
 
 (*) - Planned / Under Development
+
+<hr />
+
+**phunction adopted [Semantic Versioning](http://semver.org/) since version *2.4.0*.**
