@@ -13,6 +13,11 @@ class phunction_Math extends phunction
 	{
 	}
 
+	public function __get($key)
+	{
+		return $this->$key = parent::__get(sprintf('%s_%s', ltrim(strrchr(__CLASS__, '_'), '_'), $key));
+	}
+
 	public static function Average()
 	{
 		$result = 0;
@@ -33,49 +38,49 @@ class phunction_Math extends phunction
 			$input = max(2, min(intval($input), strlen($charset)));
 			$output = max(2, min(intval($output), strlen($charset)));
 			$number = ltrim(preg_replace('~[^' . preg_quote(substr($charset, 0, max($input, $output)), '~') . ']+~', '', $number), $charset[0]);
-	
+
 			if (strlen($number) > 0)
 			{
 				if (extension_loaded('gmp') === true)
 				{
 					$string = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-	
+
 					if ((max($input, $output) <= 62) && (version_compare(PHP_VERSION, '5.3.2', '>=') === true))
 					{
 						return strtr(gmp_strval(gmp_init(strtr($number, $charset, $string), $input), $output), $string, $charset);
 					}
 				}
-	
+
 				if ($input != 10)
 				{
 					$result = 0;
-	
+
 					foreach (str_split(strrev($number)) as $key => $value)
 					{
 						$result += pow($input, $key) * intval(strpos($charset, $value));
 					}
-	
+
 					$number = $result;
 				}
-	
+
 				if ($output != 10)
 				{
 					$result = $charset[$number % $output];
-	
+
 					while (($number = intval($number / $output)) > 0)
 					{
 						$result = $charset[$number % $output] . $result;
 					}
-	
+
 					$number = $result;
 				}
-	
+
 				return $number;
 			}
-	
+
 			return $charset[0];
 		}
-	
+
 		return false;
 	}
 
