@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.5.3 (github.com/alixaxel/phunction/)
+* phunction 2.5.4 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -27,9 +27,9 @@ class phunction
 				self::Redirect(str_ireplace('://www.', '://', self::URL()), null, null, 301);
 			}
 
-			else if (strlen(session_id()) == 0)
+			else if ((strlen(session_id()) == 0) && (is_writable(session_save_path()) === true))
 			{
-				@session_start();
+				session_start();
 			}
 		}
 
