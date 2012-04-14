@@ -224,7 +224,12 @@ class phunction_HTTP extends phunction
 
 	public static function Secure()
 	{
-		return in_array(parent::Value($_SERVER, 'HTTP_X_FORWARDED_PROTO', parent::Value($_SERVER, 'HTTPS')), array(1, 'on', 'https'));
+		if ((in_array(parent::Value($_SERVER, 'HTTPS'), array(1, 'on')) === true) || (strcasecmp('https', parent::Value($_SERVER, 'HTTP_X_FORWARDED_PROTO')) === 0))
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	public static function Sleep($time = 1)
