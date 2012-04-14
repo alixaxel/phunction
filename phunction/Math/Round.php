@@ -17,7 +17,7 @@ class phunction_Math_Round extends phunction_Math
 	{
 		if ($precision == 0)
 		{
-			return self::Multiple($number, pow(10, strlen(preg_replace('~[.].+|[^0]~', '', $precision))), $callback);
+			return self::Multiple($number, pow(10, strspn(strpbrk($precision, '0'), '0')), $callback);
 		}
 
 		return self::Multiple($number - abs($precision), pow(10, intval(log(abs($precision), 10) + 1)), $callback) + abs($precision);
