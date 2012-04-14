@@ -129,7 +129,7 @@ class phunction_Text_Unicode extends phunction_Text
 
 	public static function strlen($string)
 	{
-		return strlen(utf8_decode($string));
+		return count(self::str_split($string));
 	}
 
 	public static function strpos($string, $search, $offset = 0)
