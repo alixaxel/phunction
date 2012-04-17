@@ -15,32 +15,32 @@ class phunction_Math_Round extends phunction_Math
 
 	public static function Digit($number, $precision, $callback = 'round')
 	{
-		if ($precision == 0)
+		if (($precision != 0) && ($precision = abs($precision)))
 		{
-			return self::Multiple($number, pow(10, strspn(strpbrk($precision, '0'), '0')), $callback);
+			return self::Multiple($number - $precision, pow(10, intval(log($precision, 10) + 1)), $callback) + $precision;
 		}
 
-		return self::Multiple($number - abs($precision), pow(10, intval(log(abs($precision), 10) + 1)), $callback) + abs($precision);
+		return self::Multiple($number, pow(10, strspn(strpbrk($precision, '0'), '0')), $callback);
 	}
 
 	public static function Multiple($number, $precision, $callback = 'round')
 	{
-		if ($precision == 0)
+		if (($precision != 0) && ($precision = abs($precision)))
 		{
-			return 0;
+			return call_user_func($callback, $number / $precision) * $precision;
 		}
 
-		return call_user_func($callback, $number / $precision) * $precision;
+		return 0;
 	}
 
 	public static function Significant($number, $precision, $callback = 'round')
 	{
-		if ($precision == 0)
+		if (($precision != 0) && ($precision = abs($precision)))
 		{
-			return 0;
+			return self::Multiple($number, pow(10, intval(log($number, 10) + 1) - $precision), $callback);
 		}
 
-		return self::Multiple($number, pow(10, intval(log($number, 10) + 1) - abs($precision)), $callback);
+		return 0;
 	}
 }
 
