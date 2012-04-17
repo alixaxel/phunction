@@ -82,14 +82,14 @@ class phunction_HTTP extends phunction
 	{
 		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
 		{
-			$result = 'Status:';
+			$result = parent::Value($_SERVER, 'SERVER_PROTOCOL');
 
-			if (strncmp('cgi', PHP_SAPI, 3) !== 0)
+			if (strncmp('cgi', PHP_SAPI, 3) === 0)
 			{
-				$result = parent::Value($_SERVER, 'SERVER_PROTOCOL', 'HTTP/1.1');
+				$result = 'Status:';
 			}
 
-			header(rtrim(sprintf('%s %03u %s', (preg_match('~Status:|HTTP/~i', $result) > 0) ? $result : 'HTTP/1.1', $code, $string)), $replace, $code);
+			header(rtrim(sprintf('%s %03u %s', $result, $code, $string)), $replace, $code);
 		}
 	}
 
