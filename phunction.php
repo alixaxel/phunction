@@ -408,7 +408,7 @@ class phunction
 		{
 			session_write_close();
 
-			if ((preg_match('~^30[37]$~', $code) > 0) && (version_compare(str_replace('HTTP/', '', self::Value($_SERVER, 'SERVER_PROTOCOL')), '1.1', '<') === true))
+			if ((preg_match('~^30[37]$~', $code) > 0) && (version_compare(ltrim(strstr(self::Value($_SERVER, 'SERVER_PROTOCOL'), '/'), '/'), '1.1', '<') === true))
 			{
 				$code = 302;
 			}
