@@ -82,11 +82,11 @@ class phunction_HTTP extends phunction
 	{
 		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
 		{
-			$result = parent::Value($_SERVER, 'SERVER_PROTOCOL');
+			$result = 'Status:';
 
-			if (strncmp('cgi', PHP_SAPI, 3) === 0)
+			if (strncmp('cgi', PHP_SAPI, 3) !== 0)
 			{
-				$result = 'Status:';
+				$result = parent::Value($_SERVER, 'SERVER_PROTOCOL');
 			}
 
 			header(rtrim(sprintf('%s %03u %s', $result, $code, $string)), $replace, $code);
