@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.5.4 (github.com/alixaxel/phunction/)
+* phunction 2.5.5 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -402,29 +402,21 @@ class phunction
 		return false;
 	}
 
-	public static function Redirect($url, $path = null, $query = null, $code = 302)
+	public static function Redirect($url, $path = null, $query = null, $code = 303)
 	{
-		if (strncmp('cli', PHP_SAPI, 3) !== 0)
+		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
 		{
-			if (headers_sent() !== true)
+			session_write_close();
+
+			if ((preg_match('~^30[37]$~', $code) > 0) && (version_compare(str_replace('HTTP/', '', self::Value($_SERVER, 'SERVER_PROTOCOL')), '1.1', '<') === true))
 			{
-				session_write_close();
-
-				if (strncmp('cgi', PHP_SAPI, 3) === 0)
-				{
-					header(sprintf('Status: %03u', $code), true, $code);
-				}
-
-				if ((isset($path) === true) || (isset($query) === true))
-				{
-					$url = self::URL($url, $path, $query);
-				}
-
-				header('Location: ' . $url, true, (preg_match('~^30[1237]$~', $code) > 0) ? $code : 302);
+				$code = 302;
 			}
 
-			exit();
+			header(sprintf('Location: %s', ((isset($path) === true) || (isset($query) === true)) ? self::URL($url, $path, $query) : $url), true, $code);
 		}
+
+		exit();
 	}
 
 	public static function Request($input, $filters = null, $callbacks = null, $required = true)
