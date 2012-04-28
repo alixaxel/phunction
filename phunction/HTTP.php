@@ -248,7 +248,7 @@ class phunction_HTTP extends phunction
 				return $_SESSION[__METHOD__][$key] = sha1(uniqid(mt_rand(), true));
 			}
 
-			return true;
+			return (isset($value) === true) ? true : $result;
 		}
 
 		return false;
