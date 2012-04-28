@@ -35,7 +35,7 @@ class phunction_HTML extends phunction
 
 	public static function DOM($html, $xpath = null, $key = null, $default = false)
 	{
-		if ((extension_loaded('dom') === true) && (extension_loaded('SimpleXML') === true))
+		if (count(array_filter(array('dom', 'SimpleXML'), 'extension_loaded')) == 2)
 		{
 			if (is_object($html) === true)
 			{
@@ -47,9 +47,19 @@ class phunction_HTML extends phunction
 				return (isset($key) === true) ? parent::Value($html, $key, $default) : $html;
 			}
 
-			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
+			else if (is_string($html) === true)
 			{
-				return self::DOM(@simplexml_import_dom(DOMDocument::loadHTML(ph()->Text->Unicode->mb_html_entities($html))), $xpath, $key, $default);
+				$dom = new DOMDocument();
+
+				if (libxml_use_internal_errors(true) === true)
+				{
+					libxml_clear_errors();
+				}
+
+				if ($dom->loadHTML(ph()->Text->Unicode->mb_html_entities($html)) === true)
+				{
+					return self::DOM(simplexml_import_dom($dom), $xpath, $key, $default);
+				}
 			}
 		}
 
@@ -130,9 +140,16 @@ class phunction_HTML extends phunction
 				}
 			}
 
-			else if ((is_string($html) === true) && (is_bool(libxml_use_internal_errors(true)) === true))
+			else if (is_string($html) === true)
 			{
-				if (is_object($html = @DOMDocument::loadHTML(ph()->Text->Unicode->mb_html_entities($html))) === true)
+				$dom = new DOMDocument();
+
+				if (libxml_use_internal_errors(true) === true)
+				{
+					libxml_clear_errors();
+				}
+
+				if ($dom->loadHTML(ph()->Text->Unicode->mb_html_entities($html)) === true)
 				{
 					if (is_array($whitelist) !== true)
 					{
@@ -151,12 +168,12 @@ class phunction_HTML extends phunction
 						$whitelist[$tag] = preg_grep('~^(?:on|(?:1?|archive|content|style)$)~i', array_map('strtolower', $attributes), PREG_GREP_INVERT);
 					}
 
-					if (isset($html->documentElement) === true)
+					if (isset($dom->documentElement) === true)
 					{
-						self::Purify($html->documentElement, array_merge(array_fill_keys(array('#text', 'html', 'body'), array()), $whitelist), $protocols);
+						self::Purify($dom->documentElement, array_merge(array_fill_keys(array('#text', 'html', 'body'), array()), $whitelist), $protocols);
 					}
 
-					return preg_replace('~<(?:!DOCTYPE|/?(?:html|body))[^>]*>\s*~i', '', $html->saveHTML());
+					return preg_replace('~<(?:!DOCTYPE|/?(?:html|body))[^>]*>\s*~i', '', $dom->saveHTML());
 				}
 			}
 		}
