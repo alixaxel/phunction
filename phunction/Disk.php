@@ -454,25 +454,22 @@ class phunction_Disk extends phunction
 	{
 		if (empty($path) === true)
 		{
-			$path = parent::Value(array_filter(array_map('getenv', array('TMP', 'TEMP', 'TMPDIR')), 'strlen'), 0);
+			$path = array_map('getenv', array('TMP', 'TEMP', 'TEMPDIR'));
 
 			if (function_exists('sys_get_temp_dir') === true)
 			{
-				$path = sys_get_temp_dir();
+				array_unshift($path, sys_get_temp_dir());
 			}
+
+			$path = parent::Value(array_filter($path, 'strlen'), 0);
 		}
 
-		if (is_writable($path) === true)
+		if (($result = tempnam(self::Path($path), $id)) !== false)
 		{
-			if (($result = tempnam(self::Path($path), $id)) !== false)
-			{
-				self::Chmod($result, $chmod);
-			}
-
-			return $result;
+			self::Chmod($result, $chmod);
 		}
 
-		return false;
+		return $result;
 	}
 
 	public static function Upload($input, $output, $mime = null, $magic = null, $chmod = null)
