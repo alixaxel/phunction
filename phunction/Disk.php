@@ -454,7 +454,7 @@ class phunction_Disk extends phunction
 	{
 		if (empty($path) === true)
 		{
-			$path = array_map('getenv', array('TMP', 'TEMP', 'TEMPDIR'));
+			$path = array_map('getenv', array('TMP', 'TEMP', 'TMPDIR'));
 
 			if (function_exists('sys_get_temp_dir') === true)
 			{
