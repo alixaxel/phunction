@@ -454,14 +454,12 @@ class phunction_Disk extends phunction
 	{
 		if (empty($path) === true)
 		{
-			$path = array_map('getenv', array('TMP', 'TEMP', 'TMPDIR'));
+			$path = parent::Value(array_filter(array_map('getenv', array('TMP', 'TEMP', 'TMPDIR')), 'strlen'), 0);
 
-			if (function_exists('sys_get_temp_dir') === true)
+			if (($path === false) && (function_exists('sys_get_temp_dir') === true))
 			{
-				array_unshift($path, sys_get_temp_dir());
+				$path = sys_get_temp_dir();
 			}
-
-			$path = parent::Value(array_filter($path, 'strlen'), 0);
 		}
 
 		if (($result = tempnam(self::Path($path), $id)) !== false)
