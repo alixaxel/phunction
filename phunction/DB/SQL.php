@@ -160,15 +160,23 @@ class phunction_DB_SQL extends phunction_DB
 				}
 
 				$this->sql['query'] .= sprintf(' VALUES (%s)', implode(', ', parent::Quote($data)));
-
-				if ((is_array($replace) === true) && (strcmp('mysql', phunction::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0))
+				
+				if (strcmp('mysql', phunction::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
 				{
-					foreach ($replace as $key => $value)
+					if ((is_array($replace) === true) && (count($replace) > 0))
 					{
-						$replace[$key] = sprintf('%s = %s', parent::Tick($key), parent::Quote($value));
-					}
+						foreach ($replace as $key => $value)
+						{
+							$replace[$key] = sprintf('%s = %s', parent::Tick($key), parent::Quote($value));
+						}
 
-					$this->sql['query'] .= sprintf(' ON DUPLICATE KEY UPDATE %s', implode(', ', $replace));
+						$this->sql['query'] .= sprintf(' ON DUPLICATE KEY UPDATE %s', implode(', ', $replace));
+					}
+				}
+				
+				else if (strcmp('pgsql', phunction::DB()->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
+				{
+					$this->sql['query'] .= sprintf(' RETURNING %s', parent::Tick('id'));
 				}
 
 				$this->sql['query'] = preg_replace('~^(INSERT)~', sprintf('%s', ($replace === true) ? 'REPLACE' : '$1'), $this->sql['query'], 1);

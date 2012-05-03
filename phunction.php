@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.5.10 (github.com/alixaxel/phunction/)
+* phunction 2.5.11 (github.com/alixaxel/phunction/)
 * Copyright (c) 2011 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -147,7 +147,19 @@ class phunction
 				{
 					if (preg_match('~^(?:INSERT|REPLACE)\b~i', $query) > 0)
 					{
-						return $db[self::$id]->lastInsertId();
+						$sequence = null;
+						
+						if (strcmp('pgsql', $db[self::$id]->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
+						{
+							if (preg_match('~\bRETURNING\b~i', $query) > 0)
+							{
+								return $result[self::$id][$hash]->fetchColumn();
+							}
+							
+							$sequence = sprintf('%s_id_seq', trim(ph()->Text->Regex($query, 'INTO\s*(["\w]+)', array(1, 0), 'i'), '"'));
+						}
+						
+						return $db[self::$id]->lastInsertId($sequence);
 					}
 
 					else if (preg_match('~^(?:UPDATE|DELETE)\b~i', $query) > 0)
