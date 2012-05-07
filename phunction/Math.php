@@ -18,19 +18,6 @@ class phunction_Math extends phunction
 		return $this->$key = parent::__get(sprintf('%s_%s', ltrim(strrchr(__CLASS__, '_'), '_'), $key));
 	}
 
-	public static function Average()
-	{
-		$result = 0;
-		$arguments = parent::Flatten(func_get_args());
-
-		foreach ($arguments as $argument)
-		{
-			$result += $argument;
-		}
-
-		return ($result / max(1, count($arguments)));
-	}
-
 	public static function Base($input, $output, $number = 1, $charset = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 	{
 		if (strlen($charset) >= 2)
@@ -168,7 +155,7 @@ class phunction_Math extends phunction
 	{
 		if (function_exists('stats_standard_deviation') !== true)
 		{
-			$result = self::Average(func_get_args());
+			$result = self::Mean(func_get_args());
 			$arguments = parent::Flatten(func_get_args());
 
 			foreach ($arguments as $key => $value)
@@ -176,7 +163,7 @@ class phunction_Math extends phunction
 				$arguments[$key] = pow($value - $result, 2);
 			}
 
-			return sqrt(self::Average($arguments));
+			return sqrt(self::Mean($arguments));
 		}
 
 		return stats_standard_deviation(parent::Flatten(func_get_args()));
@@ -367,6 +354,31 @@ class phunction_Math extends phunction
 		}
 
 		return false;
+	}
+	
+	public static function Mean()
+	{
+		return ph()->Math->Mean->Arithmetic(func_get_args());
+	}
+
+	public static function Median()
+	{
+		if ((($result = count($arguments = parent::Flatten(func_get_args()))) > 2) && (sort($arguments, SORT_NUMERIC) === true))
+		{
+			$arguments = array_slice($arguments, floor($result / 2) - 1, 2);
+		}
+
+		return (($result % 2) == 0) ? self::Arithmetic($arguments) : array_pop($arguments);
+	}
+
+	public static function Mode()
+	{
+		if (count($arguments = array_count_values(parent::Flatten(func_get_args()))) > 0)
+		{
+			return array_keys($arguments, max($arguments));
+		}
+
+		return array();
 	}
 
 	public static function Pagination($data, $limit = null, $current = null, $adjacents = null)
