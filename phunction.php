@@ -148,17 +148,17 @@ class phunction
 					if (preg_match('~^(?:INSERT|REPLACE)\b~i', $query) > 0)
 					{
 						$sequence = null;
-						
+
 						if (strcmp('pgsql', $db[self::$id]->getAttribute(PDO::ATTR_DRIVER_NAME)) === 0)
 						{
 							if (preg_match('~\bRETURNING\b~i', $query) > 0)
 							{
 								return $result[self::$id][$hash]->fetchColumn();
 							}
-							
+
 							$sequence = sprintf('%s_id_seq', trim(ph()->Text->Regex($query, 'INTO\s*(["\w]+)', array(1, 0), 'i'), '"'));
 						}
-						
+
 						return $db[self::$id]->lastInsertId($sequence);
 					}
 
