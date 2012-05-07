@@ -18,6 +18,7 @@
    * HTTP
    * Is
    * Math
+      * Mean
       * Round
    * Net
       * Akismet

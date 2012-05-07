@@ -368,7 +368,7 @@ class phunction_Math extends phunction
 			$arguments = array_slice($arguments, floor($result / 2) - 1, 2);
 		}
 
-		return (($result % 2) == 0) ? self::Arithmetic($arguments) : array_pop($arguments);
+		return (($result % 2) == 0) ? self::Mean($arguments) : array_pop($arguments);
 	}
 
 	public static function Mode()
