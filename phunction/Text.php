@@ -67,15 +67,28 @@ class phunction_Text extends phunction
 	{
 		if (strlen($string = trim($string)) > 0)
 		{
-			$string = sprintf('%s%s%s', $delimiter, $string, $delimiter);
+			$string = sprintf('%1$s%2$s%1$s', $delimiter, $string);
 		}
 
 		return $string;
 	}
 
+	public static function Enthalpy($string)
+	{
+		return ph()->Text->Unicode->strlen(preg_replace('~(.)\1+~su', '$1', $string));
+	}
+
 	public static function Entropy($string)
 	{
-		return strlen(count_chars($string, 3)) * 100 / 256;
+		$result = 0;
+		$length = ph()->Text->Unicode->strlen($string);
+
+		foreach (ph()->Text->Unicode->count_chars($string) as $value)
+		{
+			$result -= $value / $length * log($value / $length, 2);
+		}
+
+		return $result;
 	}
 
 	public static function GUID()
