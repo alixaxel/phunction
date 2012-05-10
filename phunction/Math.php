@@ -71,6 +71,77 @@ class phunction_Math extends phunction
 		return false;
 	}
 
+	public static function BC($string)
+	{
+		if (extension_loaded('bcmath') === true)
+		{
+			if (is_array($string) === true)
+			{
+				if ((count($string = array_slice($string, 1)) == 3) && (bcscale(64) === true))
+				{
+					$callback = array('^' => 'pow', '*' => 'mul', '/' => 'div', '%' => 'mod', '+' => 'add', '-' => 'sub');
+
+					if (array_key_exists($operator = current(array_splice($string, 1, 1)), $callback) === true)
+					{
+						$x = 1;
+						$result = @call_user_func_array('bc' . $callback[$operator], $string);
+
+						if ((strcmp('^', $operator) === 0) && (($i = fmod(array_pop($string), 1)) > 0))
+						{
+							$y = self::BC(sprintf('((%1$s * %2$s ^ (1 - %3$s)) / %3$s) - (%2$s / %3$s) + %2$s', $string = current($string), $x, $i = pow($i, -1)));
+
+							do
+							{
+								$x = $y;
+								$y = self::BC(sprintf('((%1$s * %2$s ^ (1 - %3$s)) / %3$s) - (%2$s / %3$s) + %2$s', $string, $x, $i));
+							}
+
+							while (self::BC(sprintf('%s > %s', $x, $y)));
+						}
+
+						if (strpos($result = bcmul($x, $result), '.') !== false)
+						{
+							$result = rtrim(rtrim($result, '0'), '.');
+
+							if (preg_match('~[.][0]{63}[1]$~', $result) > 0)
+							{
+								$result = bcmul($result, 1, 0);
+							}
+
+							else if (preg_match('~[.][9]{64}$~', $result) > 0)
+							{
+								$result = (strncmp('-', $result, 1) === 0) ? bcsub($result, 1, 0) : bcadd($result, 1, 0);
+							}
+						}
+
+						return $result;
+					}
+
+					return intval(version_compare(call_user_func_array('bccomp', $string), 0, $operator));
+				}
+
+				$string = array_shift($string);
+			}
+
+			$string = str_replace(' ', '', str_ireplace('e', ' * 10 ^ ', $string));
+
+			while (preg_match('~[(]([^()]++)[)]~', $string) > 0)
+			{
+				$string = preg_replace_callback('~[(]([^()]++)[)]~', __METHOD__, $string);
+			}
+
+			foreach (array('\^', '[\*/%]', '[\+-]', '[<>]=?|={1,2}') as $operator)
+			{
+				while (preg_match(sprintf('~(?<![0-9])(%1$s)(%2$s)(%1$s)~', '[+-]?(?:[0-9]++(?:[.][0-9]*+)?|[.][0-9]++)', $operator), $string) > 0)
+				{
+					$string = preg_replace_callback(sprintf('~(?<![0-9])(%1$s)(%2$s)(%1$s)~', '[+-]?(?:[0-9]++(?:[.][0-9]*+)?|[.][0-9]++)', $operator), __METHOD__, $string, 1);
+				}
+			}
+		}
+
+		return (preg_match('~^[+-]?[0-9]++(?:[.][0-9]++)?$~', $string) > 0) ? $string : false;
+	}
+
 	public static function Benchmark($callback, $arguments = null, $iterations = 1000)
 	{
 		if (is_callable($callback) === true)
@@ -355,7 +426,7 @@ class phunction_Math extends phunction
 
 		return false;
 	}
-	
+
 	public static function Mean()
 	{
 		return ph()->Math->Mean->Arithmetic(func_get_args());
