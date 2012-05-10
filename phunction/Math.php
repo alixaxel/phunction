@@ -88,7 +88,7 @@ class phunction_Math extends phunction
 
 						if ((strcmp('^', $operator) === 0) && (($i = fmod(array_pop($string), 1)) > 0))
 						{
-							$y = self::BC(sprintf('((%1$s * %2$s ^ (1 - %3$s)) / %3$s) - (%2$s / %3$s) + %2$s', $string = current($string), $x, $i = pow($i, -1)));
+							$y = self::BC(sprintf('((%1$s * %2$s ^ (1 - %3$s)) / %3$s) - (%2$s / %3$s) + %2$s', $string = array_shift($string), $x, $i = pow($i, -1)));
 
 							do
 							{
