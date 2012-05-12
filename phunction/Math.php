@@ -71,13 +71,13 @@ class phunction_Math extends phunction
 		return false;
 	}
 
-	public static function BC($string)
+	public static function BC($string, $precision = 32)
 	{
 		if (extension_loaded('bcmath') === true)
 		{
 			if (is_array($string) === true)
 			{
-				if ((count($string = array_slice($string, 1)) == 3) && (bcscale(64) === true))
+				if ((count($string = array_slice($string, 1)) == 3) && (bcscale($precision) === true))
 				{
 					$callback = array('^' => 'pow', '*' => 'mul', '/' => 'div', '%' => 'mod', '+' => 'add', '-' => 'sub');
 
@@ -103,14 +103,14 @@ class phunction_Math extends phunction
 						{
 							$result = rtrim(rtrim($result, '0'), '.');
 
-							if (preg_match('~[.][0]{63}[1]$~', $result) > 0)
-							{
-								$result = bcmul($result, 1, 0);
-							}
-
-							else if (preg_match('~[.][9]{64}$~', $result) > 0)
+							if (preg_match(sprintf('~[.][9]{%u}$~', $precision), $result) > 0)
 							{
 								$result = (strncmp('-', $result, 1) === 0) ? bcsub($result, 1, 0) : bcadd($result, 1, 0);
+							}
+
+							else if (preg_match(sprintf('~[.][0]{%u}[1]$~', $precision - 1), $result) > 0)
+							{
+								$result = bcmul($result, 1, 0);
 							}
 						}
 
