@@ -84,7 +84,7 @@ class phunction_Disk extends phunction
 				$size = sprintf('%u', filesize($path));
 				$speed = (empty($speed) === true) ? 1024 : floatval($speed);
 
-				if (is_resource($file) === true)
+				if (($multipart === true) && (ph()->HTTP->Version('1.1') === true))
 				{
 					set_time_limit(0);
 					session_write_close();
