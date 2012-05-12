@@ -233,10 +233,10 @@ class phunction_HTTP extends phunction
 					return true;
 				}
 			}
-			
+
 			return false;
 		}
-		
+
 		return true;
 	}
 
@@ -249,7 +249,7 @@ class phunction_HTTP extends phunction
 	{
 		if (strlen(session_id()) > 0)
 		{
-			$result = self::Value($_SESSION, array(__METHOD__, $key), null);
+			$result = parent::Value($_SESSION, array(__METHOD__, $key), null);
 
 			if ((is_null($result) === true) || ((isset($value) === true) && (strcmp($value, $result) !== 0)))
 			{
@@ -260,6 +260,21 @@ class phunction_HTTP extends phunction
 		}
 
 		return false;
+	}
+
+	public static function Version($version = null)
+	{
+		if (($result = parent::Value($_SERVER, 'SERVER_PROTOCOL')) !== false)
+		{
+			$result = ltrim(strstr($result, '/'), '/');
+
+			if (isset($version) === true)
+			{
+				return version_compare($result, $version, '>=');
+			}
+		}
+
+		return $result;
 	}
 }
 
