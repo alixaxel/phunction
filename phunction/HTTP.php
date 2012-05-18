@@ -168,9 +168,16 @@ class phunction_HTTP extends phunction
 		return parent::Value($_SERVER, 'REMOTE_ADDR', '127.0.0.1');
 	}
 
-	public static function JSON($data, $callback = null)
+	public static function JSON($data, $callback = null, $whitespace = false)
 	{
-		if (is_string($data = json_encode($data)) === true)
+		$options = 0;
+
+		if (($whitespace === true) && (defined('JSON_PRETTY_PRINT') === true))
+		{
+			$options += constant('JSON_PRETTY_PRINT');
+		}
+
+		if (is_string($data = json_encode($data, $options)) === true)
 		{
 			$callback = preg_replace('~[^[:alnum:]\[\]_.]~', '', $callback);
 
