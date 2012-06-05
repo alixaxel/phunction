@@ -59,6 +59,11 @@ class phunction_Math_BC extends phunction_Math
 			}
 
 			$number = bcadd($number, $result, $precision);
+
+			if (($precision > 0) && (strpos($number, '.') !== false))
+			{
+				$number = rtrim(rtrim($number, '0'), '.');
+			}
 		}
 
 		return $number;
