@@ -105,7 +105,7 @@ class phunction_Math extends phunction
 
 							if (preg_match(sprintf('~[.][9]{%u}$~', $precision), $result) > 0)
 							{
-								$result = (strncmp('-', $result, 1) === 0) ? bcsub($result, 1, 0) : bcadd($result, 1, 0);
+								$result = bcadd($result, (strncmp('-', $result, 1) === 0) ? -1 : 1, 0);
 							}
 
 							else if (preg_match(sprintf('~[.][0]{%u}[1]$~', $precision - 1), $result) > 0)
