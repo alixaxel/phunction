@@ -15,16 +15,19 @@ class phunction_Math_BC extends phunction_Math
 
 	public static function Ceil($number)
 	{
-		if ((strpos($number, '.') !== false) && (strpos($number = rtrim(rtrim($number, '0'), '.'), '.') !== false))
+		if ((extension_loaded('bcmath') === true) && (strpos($number, '.') !== false))
 		{
-			$result = 1;
-
-			if (strncmp('-', $number, 1) === 0)
+			if (strpos($number = rtrim(rtrim($number, '0'), '.'), '.') !== false)
 			{
-				--$result;
-			}
+				$result = 1;
 
-			$number = bcadd($number, $result, 0);
+				if (strncmp('-', $number, 1) === 0)
+				{
+					--$result;
+				}
+
+				$number = bcadd($number, $result, 0);
+			}
 		}
 
 		return $number;
@@ -32,16 +35,19 @@ class phunction_Math_BC extends phunction_Math
 
 	public static function Floor($number)
 	{
-		if ((strpos($number, '.') !== false) && (strpos($number = rtrim(rtrim($number, '0'), '.'), '.') !== false))
+		if ((extension_loaded('bcmath') === true) && (strpos($number, '.') !== false))
 		{
-			$result = 0;
-
-			if (strncmp('-', $number, 1) === 0)
+			if (strpos($number = rtrim(rtrim($number, '0'), '.'), '.') !== false)
 			{
-				--$result;
-			}
+				$result = 0;
 
-			$number = bcadd($number, $result, 0);
+				if (strncmp('-', $number, 1) === 0)
+				{
+					--$result;
+				}
+
+				$number = bcadd($number, $result, 0);
+			}
 		}
 
 		return $number;
@@ -49,20 +55,23 @@ class phunction_Math_BC extends phunction_Math
 
 	public static function Round($number, $precision = 0)
 	{
-		if ((strpos($number, '.') !== false) && (strpos($number = rtrim(rtrim($number, '0'), '.'), '.') !== false))
+		if ((extension_loaded('bcmath') === true) && (strpos($number, '.') !== false))
 		{
-			$result = sprintf('0.%s5', str_repeat('0', $precision));
-
-			if (strncmp('-', $number, 1) === 0)
+			if (strpos($number = rtrim(rtrim($number, '0'), '.'), '.') !== false)
 			{
-				$result = sprintf('-%s', $result);
-			}
+				$result = sprintf('0.%s5', str_repeat('0', $precision));
 
-			$number = bcadd($number, $result, $precision);
+				if (strncmp('-', $number, 1) === 0)
+				{
+					$result = sprintf('-%s', $result);
+				}
 
-			if (($precision > 0) && (strpos($number, '.') !== false))
-			{
-				$number = rtrim(rtrim($number, '0'), '.');
+				$number = bcadd($number, $result, $precision);
+
+				if (($precision > 0) && (strpos($number, '.') !== false))
+				{
+					$number = rtrim(rtrim($number, '0'), '.');
+				}
 			}
 		}
 
