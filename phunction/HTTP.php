@@ -183,7 +183,7 @@ class phunction_HTTP extends phunction
 
 			if ((strncmp('cli', PHP_SAPI, 3) !== 0) && (headers_sent() !== true))
 			{
-				header(sprintf('Content-Type: %s', (empty($callback) === true) ? 'application/json' : 'application/javascript'));
+				header(sprintf('Content-Type: %s/%s', 'application', (empty($callback) === true) ? 'json' : 'javascript'));
 			}
 
 			self::Flush(preg_replace('~^[(](.+)[)];$~s', '$1', sprintf('%s(%s);', $callback, $data)));
