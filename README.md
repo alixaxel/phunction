@@ -19,6 +19,7 @@
    * Is
    * Math
       * BC
+      * Combinatorics
       * Mean
       * Round
    * Net
