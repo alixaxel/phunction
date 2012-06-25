@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.10.0 (github.com/alixaxel/phunction/)
+* phunction 2.10.1 (github.com/alixaxel/phunction/)
 * Copyright (c) 2012 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -322,7 +322,7 @@ class phunction
 				$data = @iconv((empty($encoding) === true) ? 'UTF-8' : $encoding, 'UTF-8//IGNORE', $data);
 			}
 
-			return ($control === true) ? preg_replace('~\p{C}+~u', '', $data) : preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $data);
+			return ($control === true) ? preg_replace('~\p{C}+~u', '', $data) : preg_replace(array('~\R~u', '~[^\P{C}\t\n]+~u'), array("\n", ''), $data);
 		}
 
 		return $data;
