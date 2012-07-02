@@ -510,7 +510,19 @@ class phunction_Math extends phunction
 
 		return $result;
 	}
-
+	
+	public static function Range()
+	{
+		$arguments = parent::Flatten(func_get_args());
+		
+		if ((count($arguments) > 1) && (sort($arguments, SORT_NUMERIC) === true))
+		{
+			return abs(array_pop($arguments) - array_shift($arguments));
+		}
+		
+		return 0;
+	}
+	
 	public static function Rating($negative = 0, $positive = 0, $decay = 0, $power = 95)
 	{
 		$power = max(0, min(100, floatval($power))) / 100;
