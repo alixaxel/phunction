@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.10.3 (github.com/alixaxel/phunction/)
+* phunction 2.11.0 (github.com/alixaxel/phunction/)
 * Copyright (c) 2012 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -191,7 +191,7 @@ class phunction
 					self::DB('SET time_zone = ?;', date_default_timezone_get());
 					self::DB('SET NAMES ? COLLATE ?;', 'utf8', 'utf8_unicode_ci');
 				}
-				
+
 				$db[self::$id]->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 			}
 

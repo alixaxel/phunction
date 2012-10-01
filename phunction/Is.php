@@ -18,14 +18,19 @@ class phunction_Is extends phunction
 		return (filter_var($string, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[\x20-\x7E]*$~'))) !== false) ? true : false;
 	}
 
-	public static function Alpha($string = null)
+	public static function Alpha($string, $numeric = false)
 	{
+		if ($numeric === true)
+		{
+			return (filter_var($string, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[0-9a-z]*$~i'))) !== false) ? true : false;
+		}
+
 		return (filter_var($string, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[a-z]*$~i'))) !== false) ? true : false;
 	}
 
-	public static function Alphanum($string = null)
+	public static function Base64($string = null)
 	{
-		return (filter_var($string, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[0-9a-z]*$~i'))) !== false) ? true : false;
+		return (filter_var($string, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^(?:[0-9a-z+/]{4})*(?:[0-9a-z+/]{3}=|[0-9a-z+/]{2}==)?$~i'))) !== false) ? true : false;
 	}
 
 	public static function Email($email = null, $mx = false)
@@ -46,6 +51,11 @@ class phunction_Is extends phunction
 		}
 
 		return false;
+	}
+
+	public static function Hex($string)
+	{
+		return (filter_var($string, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[0-9a-f]$~i'))) !== false) ? true : false;
 	}
 
 	public static function Integer($number = null, $minimum = null, $maximum = null)
