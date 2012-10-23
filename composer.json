@@ -1,7 +1,7 @@
 {
 	"name": "phunction/phunction",
 	"type": "framework",
-	"version": "2.11.1",
+	"version": "2.11.2",
 	"homepage": "https://github.com/alixaxel/phunction/",
 	"description": "carefully designed PHP 5.2+ HMVC framework",
 	"license": "MIT",

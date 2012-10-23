@@ -142,18 +142,29 @@ class phunction_Math extends phunction
 		return (preg_match('~^[+-]?[0-9]++(?:[.][0-9]++)?$~', $string) > 0) ? $string : false;
 	}
 
-	public static function Benchmark($callback, $arguments = null, $iterations = 1000)
+	public static function Benchmark($callbacks, $iterations = 1000)
 	{
-		if (is_callable($callback) === true)
+		if (count($callbacks = array_filter((array) $callbacks, 'is_callable')) > 0)
 		{
-			$result = microtime(true);
+			$result = array_fill_keys($callbacks, 0);
+			$arguments = array_slice(func_get_args(), 2);
 
-			for ($i = 1; $i <= $iterations; ++$i)
+			for ($i = 0; $i < $iterations; ++$i)
 			{
-				call_user_func_array($callback, (array) $arguments);
+				foreach ($result as $key => $value)
+				{
+					$value = microtime(true); call_user_func_array($key, $arguments); $result[$key] += microtime(true) - $value;
+				}
 			}
 
-			return self::Round(microtime(true) - $result, 8);
+			asort($result, SORT_NUMERIC);
+
+			foreach ($result as $key => $value)
+			{
+				$result[$key] = number_format($value, 8, '.', '');
+			}
+
+			return $result;
 		}
 
 		return false;
@@ -510,19 +521,19 @@ class phunction_Math extends phunction
 
 		return $result;
 	}
-	
+
 	public static function Range()
 	{
 		$arguments = parent::Flatten(func_get_args());
-		
+
 		if ((count($arguments) > 1) && (sort($arguments, SORT_NUMERIC) === true))
 		{
 			return abs(array_pop($arguments) - array_shift($arguments));
 		}
-		
+
 		return 0;
 	}
-	
+
 	public static function Rating($negative = 0, $positive = 0, $decay = 0, $power = 95)
 	{
 		$power = max(0, min(100, floatval($power))) / 100;
