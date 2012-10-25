@@ -71,7 +71,7 @@ class phunction_Disk extends phunction
 
 	public static function Download($path, $speed = null, $multipart = false)
 	{
-		if (strncmp('cli', PHP_SAPI, 3) !== 0)
+		if (strcmp('cli', PHP_SAPI) !== 0)
 		{
 			if (is_file($path = self::Path($path)) === true)
 			{

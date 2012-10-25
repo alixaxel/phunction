@@ -80,7 +80,7 @@ class phunction_HTTP extends phunction
 
 	public static function Code($code = 200, $string = null, $replace = true)
 	{
-		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
+		if ((headers_sent() !== true) && (strcmp('cli', PHP_SAPI) !== 0))
 		{
 			$result = 'Status:';
 
@@ -112,7 +112,7 @@ class phunction_HTTP extends phunction
 	{
 		static $i = 0;
 
-		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
+		if ((headers_sent() !== true) && (strcmp('cli', PHP_SAPI) !== 0))
 		{
 			$type = (in_array($type, array('LOG', 'INFO', 'WARN', 'ERROR')) === true) ? $type : 'LOG';
 
@@ -181,7 +181,7 @@ class phunction_HTTP extends phunction
 		{
 			$callback = preg_replace('~[^[:alnum:]\[\]_.]~', '', $callback);
 
-			if ((strncmp('cli', PHP_SAPI, 3) !== 0) && (headers_sent() !== true))
+			if ((headers_sent() !== true) && (strcmp('cli', PHP_SAPI) !== 0))
 			{
 				header(sprintf('Content-Type: %s/%s', 'application', (empty($callback) === true) ? 'json' : 'javascript'));
 			}

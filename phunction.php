@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.11.2 (github.com/alixaxel/phunction/)
+* phunction 2.11.3 (github.com/alixaxel/phunction/)
 * Copyright (c) 2012 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -18,7 +18,7 @@ class phunction
 		error_reporting(-1);
 		date_default_timezone_set('GMT');
 
-		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
+		if ((headers_sent() !== true) && (strcmp('cli', PHP_SAPI) !== 0))
 		{
 			header('Content-Type: text/html; charset=utf-8');
 
@@ -228,7 +228,7 @@ class phunction
 				$result = stripslashes(preg_replace("~^'|'$~", '', var_export($argument, true)));
 			}
 
-			if (strncmp('cli', PHP_SAPI, 3) !== 0)
+			if (strcmp('cli', PHP_SAPI) !== 0)
 			{
 				$result = '<pre style="background: #df0; margin: 5px; padding: 5px; text-align: left;">' . htmlspecialchars($result, ENT_QUOTES) . '</pre>';
 			}
@@ -418,7 +418,7 @@ class phunction
 
 	public static function Redirect($url, $path = null, $query = null, $code = 303)
 	{
-		if ((headers_sent() !== true) && (strncmp('cli', PHP_SAPI, 3) !== 0))
+		if ((headers_sent() !== true) && (strcmp('cli', PHP_SAPI) !== 0))
 		{
 			session_write_close();
 
