@@ -142,10 +142,10 @@ class phunction_Math extends phunction
 		return (preg_match('~^[+-]?[0-9]++(?:[.][0-9]++)?$~', $string) > 0) ? $string : false;
 	}
 
-	public static function Benchmark($callbacks, $iterations = 1000)
+	public static function Benchmark($callbacks, $iterations = 100, $relative = false)
 	{
 		set_time_limit(0);
-		
+
 		if (count($callbacks = array_filter((array) $callbacks, 'is_callable')) > 0)
 		{
 			$result = array_fill_keys($callbacks, 0);
@@ -161,8 +161,13 @@ class phunction_Math extends phunction
 
 			asort($result, SORT_NUMERIC);
 
-			foreach ($result as $key => $value)
+			foreach (array_reverse($result) as $key => $value)
 			{
+				if ($relative === true)
+				{
+					$value /= reset($result);
+				}
+
 				$result[$key] = number_format($value, 8, '.', '');
 			}
 
