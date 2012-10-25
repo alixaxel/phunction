@@ -149,7 +149,7 @@ class phunction_Math extends phunction
 		if (count($callbacks = array_filter((array) $callbacks, 'is_callable')) > 0)
 		{
 			$result = array_fill_keys($callbacks, 0);
-			$arguments = array_slice(func_get_args(), 2);
+			$arguments = array_slice(func_get_args(), 3);
 
 			for ($i = 0; $i < $iterations; ++$i)
 			{
