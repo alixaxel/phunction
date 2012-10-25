@@ -25,12 +25,12 @@
       * **[Round](https://github.com/alixaxel/phunction/blob/master/phunction/Math/Round.php)**
    * **[Net](https://github.com/alixaxel/phunction/blob/master/phunction/Net.php)**
       * **[Akismet](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Akismet.php)**
-      * **[Amazon](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Amazon.php)** (*)
-      * **[Facebook](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Facebook.php)** (*)
+      * *[Amazon](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Amazon.php)* (*)
+      * *[Facebook](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Facebook.php)* (*)
       * **[Google](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Google.php)**
       * **[PayPal](https://github.com/alixaxel/phunction/blob/master/phunction/Net/PayPal.php)**
-      * **[Twitter](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Twitter.php)** (*)
-      * **[Yahoo](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Yahoo.php)** (*)
+      * *[Twitter](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Twitter.php)* (*)
+      * *[Yahoo](https://github.com/alixaxel/phunction/blob/master/phunction/Net/Yahoo.php)* (*)
    * **[Text](https://github.com/alixaxel/phunction/blob/master/phunction/Text.php)**
       * **[Unicode](https://github.com/alixaxel/phunction/blob/master/phunction/Text/Unicode.php)**
 
