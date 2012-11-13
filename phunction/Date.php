@@ -126,28 +126,23 @@ class phunction_Date extends phunction
 
 	public static function Relative($date = 'now')
 	{
-		if (($date = parent::Date('U', $date, true)) !== false)
+		if (is_array($result = self::Difference($date, '@' . $_SERVER['REQUEST_TIME'])) === true)
 		{
-			if (($date = $_SERVER['REQUEST_TIME'] - $date) != 0)
+			if (count($result = array_filter($result)) > 0)
 			{
-				$units = array
+				$result = array
 				(
-					31536000 => 'year',
-					2592000 => 'month',
-					604800 => 'week',
-					86400 => 'day',
-					3600 => 'hour',
-					60 => 'minute',
-					1 => 'second',
+					'%u ' . key($result) . ' ago',
+					'%u ' . key($result) . 's ago',
+					current($result),
 				);
 
-				foreach ($units as $key => $value)
+				if (parent::Date('U', $date, true) > $_SERVER['REQUEST_TIME'])
 				{
-					if (($result = intval(abs($date) / $key)) >= 1)
-					{
-						return str_replace(' ago', ($date >= 1) ? ' ago' : ' from now', array('%u ' . $value . ' ago', '%u ' . $value . 's ago', $result));
-					}
+					$result = str_replace(' ago', ' from now', $result);
 				}
+
+				return $result;
 			}
 
 			return 'just now';
