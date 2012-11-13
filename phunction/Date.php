@@ -67,7 +67,7 @@ class phunction_Date extends phunction
 
 		if ((in_array(false, $date, true) !== true) && (sort($date, SORT_NUMERIC) === true))
 		{
-			$result = array_fill_keys(preg_replace('~s$~i', '', explode('|', keys)), 0);
+			$result = array_fill_keys(preg_replace('~s$~i', '', explode('|', $keys)), 0);
 
 			foreach (preg_grep('~^(?:year|month)~i', $result) as $key => $value)
 			{
