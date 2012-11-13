@@ -126,7 +126,7 @@ class phunction_Date extends phunction
 
 	public static function Relative($date = 'now')
 	{
-		if (is_array($result = self::Difference($date, '@' . $_SERVER['REQUEST_TIME'])) === true)
+		if (is_array($result = self::Difference($date)) === true)
 		{
 			if (count($result = array_filter($result)) > 0)
 			{
