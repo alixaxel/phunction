@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.11.6 (github.com/alixaxel/phunction/)
+* phunction 2.11.7 (github.com/alixaxel/phunction/)
 * Copyright (c) 2012 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -316,9 +316,9 @@ class phunction
 		{
 			if (preg_match('~[^\x00-\x7F]~', $data) > 0)
 			{
-				if (function_exists('mb_detect_encoding') === true)
+				if ((empty($encoding) === true) && (function_exists('mb_detect_encoding') === true))
 				{
-					$encoding = mb_detect_encoding($data, 'auto');
+					$encoding = mb_detect_encoding($data, 'ASCII,ISO-8859-15,UTF-8', true);
 				}
 
 				$data = @iconv((empty($encoding) === true) ? 'UTF-8' : $encoding, 'UTF-8//IGNORE', $data);
