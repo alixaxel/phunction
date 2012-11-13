@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.11.7 (github.com/alixaxel/phunction/)
+* phunction 2.12.0 (github.com/alixaxel/phunction/)
 * Copyright (c) 2012 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -84,6 +84,11 @@ class phunction
 		}
 
 		return (isset($value) === true) ? $value : false;
+	}
+
+	public static function CLI()
+	{
+		return (strcmp('cli', PHP_SAPI) === 0) ? true : false;
 	}
 
 	public static function Coalesce()

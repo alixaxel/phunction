@@ -10,9 +10,10 @@
 
 * **[phunction](https://github.com/alixaxel/phunction/blob/master/phunction.php)**
    * **[Auth](https://github.com/alixaxel/phunction/blob/master/phunction/Auth.php)**
+   * **[CLI](https://github.com/alixaxel/phunction/blob/master/phunction/CLI.php)**
+   * **[Date](https://github.com/alixaxel/phunction/blob/master/phunction/Date.php)**
    * **[DB](https://github.com/alixaxel/phunction/blob/master/phunction/DB.php)**
       * **[SQL](https://github.com/alixaxel/phunction/blob/master/phunction/DB/SQL.php)**
-   * **[Date](https://github.com/alixaxel/phunction/blob/master/phunction/Date.php)**
    * **[Disk](https://github.com/alixaxel/phunction/blob/master/phunction/Disk.php)**
    * **[HTML](https://github.com/alixaxel/phunction/blob/master/phunction/HTML.php)**
       * **[Form](https://github.com/alixaxel/phunction/blob/master/phunction/HTML/Form.php)**
