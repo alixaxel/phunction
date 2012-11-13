@@ -162,8 +162,6 @@ class phunction_Date extends phunction
 
 		if (is_array($timezones = DateTimeZone::listIdentifiers()) === true)
 		{
-			$timestamp = parent::Date('U', 'now', null, '-6 months');
-
 			if ((strlen($country) == 2) && (defined('DateTimeZone::PER_COUNTRY') === true))
 			{
 				$timezones = DateTimeZone::listIdentifiers(DateTimeZone::PER_COUNTRY, $country);
@@ -175,9 +173,9 @@ class phunction_Date extends phunction
 
 				if (is_array($transitions = $timezone->getTransitions()) === true)
 				{
-					while ((isset($result[$id]) !== true) && (is_null($transition = array_shift($transitions)) !== true))
+					while ((isset($result[$id]) !== true) && (is_null($transition = array_pop($transitions)) !== true))
 					{
-						$result[$id] = (($transition['isdst'] !== true) && ($transition['ts'] >= $timestamp)) ? $transition['offset'] : null;
+						$result[$id] = ($transition['isdst'] !== true) ? $transition['offset'] : null;
 					}
 				}
 			}
@@ -186,7 +184,7 @@ class phunction_Date extends phunction
 			{
 				foreach ($result as $key => $value)
 				{
-					$result[$key] = sprintf('(GMT %+03d:%02u) %s', $value / 3600, abs($value) % 3600 / 60, ltrim(strstr($key, '/'), '/'));
+					$result[$key] = sprintf('(UTC %+03d:%02u) %s', $value / 3600, abs($value) % 3600 / 60, ltrim(strstr($key, '/'), '/'));
 				}
 			}
 		}
