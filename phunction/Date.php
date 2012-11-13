@@ -61,6 +61,38 @@ class phunction_Date extends phunction
 		return $result;
 	}
 
+	public static function Difference($since, $until = 'now', $keys = 'year|month|week|day|hour|minute|second')
+	{
+		$date = array(parent::Date('U', $since, true), parent::Date('U', $until, true));
+
+		if ((in_array(false, $date, true) !== true) && (sort($date, SORT_NUMERIC) === true))
+		{
+			$result = array_fill_keys(preg_replace('~s$~i', '', explode('|', keys)), 0);
+
+			foreach (preg_grep('~^(?:year|month)~i', $result) as $key => $value)
+			{
+				while ($date[1] >= strtotime(sprintf('+%u %s', $value + 1, $key), $date[0]))
+				{
+					++$value;
+				}
+
+				$date[0] = strtotime(sprintf('+%u %s', $result[$key] = $value, $key), $date[0]);
+			}
+
+			foreach (preg_grep('~^(?:year|month)~i', $result, PREG_GREP_INVERT) as $key => $value)
+			{
+				if (($value = intval(abs($date[0] - $date[1]) / strtotime(sprintf('%u %s', 1, $key), 0))) > 0)
+				{
+					$date[0] = strtotime(sprintf('+%u %s', $result[$key] = $value, $key), $date[0]);
+				}
+			}
+
+			return array_change_key_case($result, CASE_LOWER);
+		}
+
+		return false;
+	}
+
 	public static function Frequency($date = 'now')
 	{
 		if (($date = parent::Date('U', $date, true)) !== false)
