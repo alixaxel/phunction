@@ -80,14 +80,14 @@ class phunction_CLI extends phunction
 	{
 		if (defined('STDIN') === true)
 		{
-			$result = (isset($bytes) === true) ? fread(STDIN, $bytes) : rtrim(fgets(STDIN), PHP_EOL);
+			$result = (isset($bytes) === true) ? fread(STDIN, $bytes) : fgets(STDIN);
 
 			if (($result !== false) && (isset($format) === true))
 			{
 				return sscanf($result, $format);
 			}
 
-			return $result;
+			return rtrim($result, PHP_EOL);
 		}
 
 		return false;
