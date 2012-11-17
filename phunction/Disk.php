@@ -23,7 +23,7 @@ class phunction_Disk extends phunction
 
 				if ((extension_loaded('posix') === true) && (($user = parent::Value(posix_getpwuid(posix_getuid()), 'name')) !== false))
 				{
-					$chmod -= (in_array($user, explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) === true) ? 0 : 22;
+					$chmod -= (in_array($user, explode('|', 'apache|httpd|nginx|nobody|system|webdaemon|www|www-data')) === true) ? 0 : 22;
 				}
 			}
 
@@ -377,7 +377,7 @@ class phunction_Disk extends phunction
 
 				if ((extension_loaded('posix') === true) && (($user = parent::Value(posix_getpwuid(posix_getuid()), 'name')) !== false))
 				{
-					$chmod -= (in_array($user, explode('|', 'apache|httpd|nobody|system|webdaemon|www|www-data')) === true) ? 0 : 22;
+					$chmod -= (in_array($user, explode('|', 'apache|httpd|nginx|nobody|system|webdaemon|www|www-data')) === true) ? 0 : 22;
 				}
 			}
 
