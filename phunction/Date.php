@@ -165,13 +165,11 @@ class phunction_Date extends phunction
 			foreach (preg_grep('~' . preg_quote($continent, '~') . '/~i', $timezones) as $id)
 			{
 				$timezone = new DateTimeZone($id);
+				$transitions = $timezone->getTransitions();
 
-				if (is_array($transitions = $timezone->getTransitions()) === true)
+				while ((isset($result[$id]) !== true) && (is_null($transition = array_pop($transitions)) !== true))
 				{
-					while ((isset($result[$id]) !== true) && (is_null($transition = array_pop($transitions)) !== true))
-					{
-						$result[$id] = ($transition['isdst'] !== true) ? $transition['offset'] : null;
-					}
+					$result[$id] = ($transition['isdst'] !== true) ? $transition['offset'] : null;
 				}
 			}
 

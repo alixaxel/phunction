@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.12.7 (github.com/alixaxel/phunction/)
+* phunction 2.12.8 (github.com/alixaxel/phunction/)
 * Copyright (c) 2010 Alix Axel <alix.axel@gmail.com>
 **/
 
