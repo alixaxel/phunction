@@ -658,5 +658,3 @@ class phunction_Math extends phunction
 		return false;
 	}
 }
-
-?>

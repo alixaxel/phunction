@@ -18,9 +18,8 @@ class phunction_HTML extends phunction
 		return $this->$key = parent::__get(sprintf('%s_%s', ltrim(strrchr(__CLASS__, '_'), '_'), $key));
 	}
 
-	public static function Autolink($string)
+	public static function Autolink($string) // TODO
 	{
-		return $string;
 	}
 
 	public static function Decode($string)
@@ -223,5 +222,3 @@ class phunction_HTML extends phunction
 		return preg_replace(array('~[.]{2,}~', '~--~', '~-~'), array('…', '—', '–'), $string);
 	}
 }
-
-?>

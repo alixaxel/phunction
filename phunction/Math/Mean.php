@@ -60,5 +60,3 @@ class phunction_Math_Mean extends phunction_Math
 		return 0;
 	}
 }
-
-?>

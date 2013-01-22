@@ -717,5 +717,3 @@ class phunction_Disk extends phunction
 		return false;
 	}
 }
-
-?>

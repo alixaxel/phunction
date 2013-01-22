@@ -66,5 +66,3 @@ class phunction_HTML_Form extends phunction_HTML
 		return array('type' => 'hidden', 'name' => $id, 'value' => ph()->HTTP->Token($id));
 	}
 }
-
-?>

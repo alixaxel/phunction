@@ -4,7 +4,7 @@
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* phunction 2.12.8 (github.com/alixaxel/phunction/)
+* phunction 2.13.0 (github.com/alixaxel/phunction/)
 * Copyright (c) 2010 Alix Axel <alix.axel@gmail.com>
 **/
 
@@ -22,12 +22,7 @@ class phunction
 		{
 			header('Content-Type: text/html; charset=utf-8');
 
-			if (strncasecmp('www.', self::Value($_SERVER, 'HTTP_HOST'), 4) === 0)
-			{
-				self::Redirect(str_ireplace('://www.', '://', self::URL()), null, null, 301);
-			}
-
-			else if ((strlen(session_id()) == 0) && (is_writable(session_save_path()) === true))
+			if ((strlen(session_id()) == 0) && (is_writable(session_save_path()) === true))
 			{
 				session_start();
 			}
@@ -235,7 +230,12 @@ class phunction
 
 			if (strcmp('cli', PHP_SAPI) !== 0)
 			{
-				$result = '<pre style="background: #df0; margin: 5px; padding: 5px; text-align: left;">' . htmlspecialchars($result, ENT_QUOTES) . '</pre>';
+				if (strpbrk($result, '<>') !== false)
+				{
+					$result = str_replace(array('<', '>'), array('&lt;', '&gt;'), $result);
+				}
+
+				$result = '<pre style="background: #df0; margin: 5px; padding: 5px; text-align: left;">' . $result . '</pre>';
 			}
 
 			echo $result . "\n";
@@ -782,5 +782,3 @@ function ph($ph = null)
 
 	return $result;
 }
-
-?>

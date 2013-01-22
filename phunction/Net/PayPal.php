@@ -52,5 +52,3 @@ class phunction_Net_PayPal extends phunction_Net
 		return false;
 	}
 }
-
-?>

@@ -13,5 +13,3 @@ class phunction_Net_Amazon extends phunction_Net
 	{
 	}
 }
-
-?>

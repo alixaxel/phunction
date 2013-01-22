@@ -80,5 +80,3 @@ class phunction_Net_Akismet extends phunction_Net
 		return false;
 	}
 }
-
-?>

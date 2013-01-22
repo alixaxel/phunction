@@ -218,5 +218,3 @@ class phunction_Date extends phunction
 		return false;
 	}
 }
-
-?>

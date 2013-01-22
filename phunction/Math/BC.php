@@ -78,5 +78,3 @@ class phunction_Math_BC extends phunction_Math
 		return $number;
 	}
 }
-
-?>

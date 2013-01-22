@@ -284,5 +284,3 @@ class phunction_HTTP extends phunction
 		return $result;
 	}
 }
-
-?>

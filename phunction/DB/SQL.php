@@ -347,5 +347,3 @@ class phunction_DB_SQL extends phunction_DB
 		return $this;
 	}
 }
-
-?>

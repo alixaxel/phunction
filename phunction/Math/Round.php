@@ -43,5 +43,3 @@ class phunction_Math_Round extends phunction_Math
 		return 0;
 	}
 }
-
-?>

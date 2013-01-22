@@ -108,5 +108,3 @@ class phunction_CLI extends phunction
 		return false;
 	}
 }
-
-?>

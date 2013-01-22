@@ -88,5 +88,3 @@ class phunction_Is extends phunction
 		return (filter_var($value, FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '~^[^[:graph:]]*$~'))) !== false) ? true : false;
 	}
 }
-
-?>

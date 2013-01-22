@@ -65,5 +65,3 @@ class phunction_Auth extends phunction
 		return (count(parent::Value($_SESSION, __CLASS__, null)) == 0) ? true : false;
 	}
 }
-
-?>

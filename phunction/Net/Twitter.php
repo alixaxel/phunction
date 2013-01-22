@@ -13,5 +13,3 @@ class phunction_Net_Twitter extends phunction_Net
 	{
 	}
 }
-
-?>

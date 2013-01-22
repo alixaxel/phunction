@@ -13,5 +13,3 @@ class phunction_Net_Yahoo extends phunction_Net
 	{
 	}
 }
-
-?>

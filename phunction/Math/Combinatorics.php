@@ -180,5 +180,3 @@ class phunction_Math_Combinatorics extends phunction_Math
 	{
 	}
 }
-
-?>

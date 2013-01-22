@@ -78,14 +78,17 @@ class phunction_Text extends phunction
 		return ph()->Text->Unicode->strlen(preg_replace('~(.)\1+~su', '$1', $string));
 	}
 
-	public static function Entropy($string)
+	public static function Entropy($string, $binary = true)
 	{
 		$result = 0;
-		$length = ph()->Text->Unicode->strlen($string);
+		$string = ($binary === true) ? count_chars($string, 1) : ph()->Text->Unicode->count_chars($string);
 
-		foreach (ph()->Text->Unicode->count_chars($string) as $value)
+		if (($length = array_sum($string)) > 0)
 		{
-			$result -= $value / $length * log($value / $length, 2);
+			foreach ($string as $value)
+			{
+				$result -= $value / $length * log($value / $lenght);
+			}
 		}
 
 		return $result;
@@ -121,7 +124,7 @@ class phunction_Text extends phunction
 		return trim(com_create_guid(), '{}');
 	}
 
-	public static function Hash($string, $hash = null, $salt = null, $cost = 1024, $algorithm = 'sha256')
+	public static function Hash($string, $hash = null, $salt = null, $cost = 1024, $algorithm = 'sha512')
 	{
 		if (extension_loaded('hash') === true)
 		{
@@ -183,9 +186,9 @@ class phunction_Text extends phunction
 		$regex = array
 		(
 			'~\s+~' => ' ',
-			'~\b([DO]\'|Fitz|Ma?c)([^\b]+)\b~ei' => 'stripslashes("$1" . ph()->Text->Unicode->ucfirst("$2"))',
-			'~\b(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|v[ao]n|vel|vit)\b~ei' => 'ph()->Text->Unicode->strtolower("$0")',
-			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|$)~ei' => 'ph()->Text->Unicode->strtoupper("$0")',
+			'~\b([DO]\'|Fitz|Ma?c)([^\b]+)\b~eiu' => 'stripslashes("$1" . ph()->Text->Unicode->ucfirst("$2"))',
+			'~\b(?:b[ei]n|d[aeio]|da[ls]|de[lr]|dit|dos|e|l[ae]s?|san|v[ao]n|vel|vit)\b~eiu' => 'ph()->Text->Unicode->strtolower("$0")',
+			'~\b(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?:,|$)~eiu' => 'ph()->Text->Unicode->strtoupper("$0")',
 		);
 
 		$string = preg_replace(array_keys($regex), $regex, ph()->Text->Unicode->ucwords(ph()->Text->Unicode->strtolower(trim($string)), "'-"));
@@ -304,5 +307,3 @@ class phunction_Text extends phunction
 		return $string;
 	}
 }
-
-?>

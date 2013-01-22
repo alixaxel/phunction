@@ -289,5 +289,3 @@ class phunction_Net_Google extends phunction_Net
 		return false;
 	}
 }
-
-?>

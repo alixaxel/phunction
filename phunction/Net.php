@@ -927,5 +927,3 @@ class phunction_Net extends phunction
 		return false;
 	}
 }
-
-?>

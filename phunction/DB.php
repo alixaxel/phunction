@@ -72,5 +72,3 @@ class phunction_DB extends phunction
 		return addcslashes($data, $escape . '\\');
 	}
 }
-
-?>
