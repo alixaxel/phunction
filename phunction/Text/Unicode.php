@@ -216,5 +216,3 @@ class phunction_Text_Unicode extends phunction_Text
 		return implode('', array_map('self::ucfirst', parent::Split($string, '[\s.!?¡¿' . preg_quote($search, '~') . ']+')));
 	}
 }
-
-?>
