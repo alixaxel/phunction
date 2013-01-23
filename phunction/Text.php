@@ -67,7 +67,7 @@ class phunction_Text extends phunction
 	{
 		if (strlen($string = trim($string)) > 0)
 		{
-			$string = sprintf('%1$s%2$s%1$s', $delimiter, $string);
+			$string = sprintf('%2$s%1$s%2$s', $string, $delimiter);
 		}
 
 		return $string;
@@ -87,7 +87,7 @@ class phunction_Text extends phunction
 		{
 			foreach ($string as $value)
 			{
-				$result -= $value / $length * log($value / $lenght);
+				$result -= $value / $length * log($value / $length);
 			}
 		}
 
