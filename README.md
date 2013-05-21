@@ -1,4 +1,4 @@
-# phunction - carefully designed PHP 5.2+ HMVC framework
+## phunction - carefully designed PHP 5.2+ HMVC framework
 
 <hr />
 
