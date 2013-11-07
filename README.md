@@ -1,4 +1,8 @@
-## phunction - carefully designed PHP 5.2+ HMVC framework
+## carefully designed PHP 5.2+ HMVC framework
+
+> Note: phunction is currently not fully compatible with PHP 5.5+.
+
+> I'm currently working on version 3.0.0 with a highly improved codebase and better documentation.
 
 <hr />
 
