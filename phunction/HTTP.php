@@ -1,286 +1,649 @@
 <?php
 
+$dsn = '';
+$clients = array
+(
+);
+
 /**
 * The MIT License
 * http://creativecommons.org/licenses/MIT/
 *
-* Copyright (c) Alix Axel <alix.axel@gmail.com>
+* ArrestDB 1.6.2 (github.com/alixaxel/ArrestDB/)
+* Copyright (c) 2013 Alix Axel <alix.axel@gmail.com>
 **/
 
-class phunction_HTTP extends phunction
+if (strcmp('cli', PHP_SAPI) === 0)
 {
-	public function __construct()
+	exit('Arrest-DB should not be run from CLI.');
+}
+
+if ((empty($clients) !== true) && (in_array($_SERVER['REMOTE_ADDR'], (array) $clients) !== true))
+{
+	$result = array
+	(
+		'error' => array
+		(
+			'code' => 403,
+			'status' => 'Forbidden',
+		),
+	);
+
+	exit(ArrestDB::Reply($result));
+}
+
+else if (ArrestDB::Query($dsn) === false)
+{
+	$result = array
+	(
+		'error' => array
+		(
+			'code' => 503,
+			'status' => 'Service Unavailable',
+		),
+	);
+
+	exit(ArrestDB::Reply($result));
+}
+
+if (array_key_exists('_method', $_GET) === true)
+{
+	$_SERVER['REQUEST_METHOD'] = strtoupper(trim($_GET['_method']));
+}
+
+else if (array_key_exists('HTTP_X_HTTP_METHOD_OVERRIDE', $_SERVER) === true)
+{
+	$_SERVER['REQUEST_METHOD'] = strtoupper(trim($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE']));
+}
+
+ArrestDB::Serve('GET', '/(#any)/(#any)/(#any)', function ($table, $id, $data)
+{
+	$query = array
+	(
+		sprintf('SELECT * FROM `%s`', $table),
+		sprintf('WHERE `%s` LIKE ?', $id),
+	);
+
+	if (isset($_GET['by']) === true)
 	{
+		if (isset($_GET['order']) !== true)
+		{
+			$_GET['order'] = 'ASC';
+		}
+
+		$query[] = sprintf('ORDER BY `%s` %s', $_GET['by'], $_GET['order']);
 	}
 
-	public static function Accept($key = null, $type = null, $match = null, $default = false)
+	if (isset($_GET['limit']) === true)
 	{
-		$result = array();
-		$header = parent::Value($_SERVER, rtrim('HTTP_ACCEPT_' . strtoupper($type), '_'));
+		$query[] = sprintf('LIMIT %u', $_GET['limit']);
 
-		if (count($header = array_filter(array_map('trim', explode(',', $header)), 'strlen')) > 0)
+		if (isset($_GET['offset']) === true)
 		{
-			foreach ($header as $accept)
+			$query[] = sprintf('OFFSET %u', $_GET['offset']);
+		}
+	}
+
+	$query = sprintf('%s;', implode(' ', $query));
+	$result = ArrestDB::Query($query, $data);
+
+	if ($result === false)
+	{
+		$result = array
+		(
+			'error' => array
+			(
+				'code' => 404,
+				'status' => 'Not Found',
+			),
+		);
+	}
+
+	else if (empty($result) === true)
+	{
+		$result = array
+		(
+			'error' => array
+			(
+				'code' => 204,
+				'status' => 'No Content',
+			),
+		);
+	}
+
+	return ArrestDB::Reply($result);
+});
+
+ArrestDB::Serve('GET', '/(#any)/(#num)?', function ($table, $id = null)
+{
+	$query = array
+	(
+		sprintf('SELECT * FROM `%s`', $table),
+	);
+
+	if (isset($id) === true)
+	{
+		$query[] = sprintf('WHERE `%s` = ? LIMIT 1', 'id');
+	}
+
+	else
+	{
+		if (isset($_GET['by']) === true)
+		{
+			if (isset($_GET['order']) !== true)
 			{
-				if (count($accept = array_filter(array_map('trim', explode(';', $accept)), 'strlen')) > 0)
+				$_GET['order'] = 'ASC';
+			}
+
+			$query[] = sprintf('ORDER BY `%s` %s', $_GET['by'], $_GET['order']);
+		}
+
+		if (isset($_GET['limit']) === true)
+		{
+			$query[] = sprintf('LIMIT %u', $_GET['limit']);
+
+			if (isset($_GET['offset']) === true)
+			{
+				$query[] = sprintf('OFFSET %u', $_GET['offset']);
+			}
+		}
+	}
+
+	$query = sprintf('%s;', implode(' ', $query));
+	$result = (isset($id) === true) ? ArrestDB::Query($query, $id) : ArrestDB::Query($query);
+
+	if ($result === false)
+	{
+		$result = array
+		(
+			'error' => array
+			(
+				'code' => 404,
+				'status' => 'Not Found',
+			),
+		);
+	}
+
+	else if (empty($result) === true)
+	{
+		$result = array
+		(
+			'error' => array
+			(
+				'code' => 204,
+				'status' => 'No Content',
+			),
+		);
+	}
+
+	else if (isset($id) === true)
+	{
+		$result = array_shift($result);
+	}
+
+	return ArrestDB::Reply($result);
+});
+
+ArrestDB::Serve('DELETE', '/(#any)/(#num)', function ($table, $id)
+{
+	$query = array
+	(
+		sprintf('DELETE FROM `%s` WHERE `%s` = ?', $table, 'id'),
+	);
+
+	$query = sprintf('%s;', implode(' ', $query));
+	$result = ArrestDB::Query($query, $id);
+
+	if ($result === false)
+	{
+		$result = array
+		(
+			'error' => array
+			(
+				'code' => 404,
+				'status' => 'Not Found',
+			),
+		);
+	}
+
+	else if (empty($result) === true)
+	{
+		$result = array
+		(
+			'error' => array
+			(
+				'code' => 204,
+				'status' => 'No Content',
+			),
+		);
+	}
+
+	else
+	{
+		$result = array
+		(
+			'success' => array
+			(
+				'code' => 200,
+				'status' => 'OK',
+			),
+		);
+	}
+
+	return ArrestDB::Reply($result);
+});
+
+if (in_array($http = strtoupper($_SERVER['REQUEST_METHOD']), array('POST', 'PUT')) === true)
+{
+	if (preg_match('~^\x78[\x01\x5E\x9C\xDA]~', $data = file_get_contents('php://input')) > 0)
+	{
+		$data = gzuncompress($data);
+	}
+
+	if ((array_key_exists('CONTENT_TYPE', $_SERVER) === true) && (empty($data) !== true))
+	{
+		if (strcasecmp($_SERVER['CONTENT_TYPE'], 'application/json') === 0)
+		{
+			$GLOBALS['_' . $http] = json_decode($data, true);
+		}
+
+		else if ((strcasecmp($_SERVER['CONTENT_TYPE'], 'application/x-www-form-urlencoded') === 0) && (strcasecmp($_SERVER['REQUEST_METHOD'], 'PUT') === 0))
+		{
+			parse_str($data, $GLOBALS['_' . $http]);
+		}
+	}
+
+	if ((isset($GLOBALS['_' . $http]) !== true) || (is_array($GLOBALS['_' . $http]) !== true))
+	{
+		$GLOBALS['_' . $http] = array();
+	}
+
+	unset($data);
+}
+
+ArrestDB::Serve('POST', '/(#any)', function ($table)
+{
+	if (empty($_POST) === true)
+	{
+		$result = array
+		(
+			'error' => array
+			(
+				'code' => 204,
+				'status' => 'No Content',
+			),
+		);
+	}
+
+	else if (is_array($_POST) === true)
+	{
+		$queries = array();
+
+		if (count($_POST) == count($_POST, COUNT_RECURSIVE))
+		{
+			$_POST = array($_POST);
+		}
+
+		foreach ($_POST as $row)
+		{
+			$data = array();
+
+			foreach ($row as $key => $value)
+			{
+				$data[sprintf('`%s`', $key)] = '?';
+			}
+
+			$query = array
+			(
+				sprintf('INSERT INTO `%s` (%s) VALUES (%s)', $table, implode(', ', array_keys($data)), implode(', ', $data)),
+			);
+
+			$queries[] = array
+			(
+				sprintf('%s;', implode(' ', $query)),
+				$data,
+			);
+		}
+
+		if (count($queries) > 1)
+		{
+			ArrestDB::Query()->beginTransaction();
+
+			while (is_null($query = array_shift($queries)) !== true)
+			{
+				if (($result = ArrestDB::Query($query[0], $query[1])) === false)
 				{
-					$result[parent::Value($accept, 0)] = floatval(str_replace('q=', '', parent::Value($accept, 1, 1)));
+					ArrestDB::Query()->rollBack(); break;
 				}
 			}
 
-			if (strlen($match = implode('|', (array) $match)) > 0)
+			if (($result !== false) && (ArrestDB::Query()->inTransaction() === true))
 			{
-				$result = array_intersect_key($result, array_flip(preg_grep('~' . $match . '|^[*](?:/[*])?$~i', array_keys($result))));
+				$result = ArrestDB::Query()->commit();
 			}
-
-			arsort($result, SORT_NUMERIC);
 		}
 
-		return (isset($key) === true) ? parent::Value(array_keys($result), intval($key), $default) : $result;
+		else if (is_null($query = array_shift($queries)) !== true)
+		{
+			$result = ArrestDB::Query($query[0], $query[1]);
+		}
+
+		if ($result === false)
+		{
+			$result = array
+			(
+				'error' => array
+				(
+					'code' => 409,
+					'status' => 'Conflict',
+				),
+			);
+		}
+
+		else
+		{
+			$result = array
+			(
+				'success' => array
+				(
+					'code' => 201,
+					'status' => 'Created',
+				),
+			);
+		}
 	}
 
-	public static function Cart($id = null, $sku = null, $name = null, $price = null, $quantity = null, $attributes = null)
+	return ArrestDB::Reply($result);
+});
+
+ArrestDB::Serve('PUT', '/(#any)/(#num)', function ($table, $id)
+{
+	if (empty($GLOBALS['_PUT']) === true)
 	{
-		if (strlen(session_id()) > 0)
+		$result = array
+		(
+			'error' => array
+			(
+				'code' => 204,
+				'status' => 'No Content',
+			),
+		);
+	}
+
+	else if (is_array($GLOBALS['_PUT']) === true)
+	{
+		$data = array();
+
+		foreach ($GLOBALS['_PUT'] as $key => $value)
 		{
-			if (empty($_SESSION[__METHOD__]) === true)
-			{
-				$_SESSION[__METHOD__] = array();
-			}
+			$data[$key] = sprintf('`%s` = ?', $key);
+		}
 
-			if (isset($sku, $name, $price, $quantity) === true)
+		$query = array
+		(
+			sprintf('UPDATE `%s` SET %s WHERE `%s` = ?', $table, implode(', ', $data), 'id'),
+		);
+
+		$query = sprintf('%s;', implode(' ', $query));
+		$result = ArrestDB::Query($query, $GLOBALS['_PUT']);
+
+		if ($result === false)
+		{
+			$result = array
+			(
+				'error' => array
+				(
+					'code' => 409,
+					'status' => 'Conflict',
+				),
+			);
+		}
+
+		else
+		{
+			$result = array
+			(
+				'success' => array
+				(
+					'code' => 200,
+					'status' => 'OK',
+				),
+			);
+		}
+	}
+
+	return ArrestDB::Reply($result);
+});
+
+$result = array
+(
+	'error' => array
+	(
+		'code' => 400,
+		'status' => 'Bad Request',
+	),
+);
+
+exit(ArrestDB::Reply($result));
+
+class ArrestDB
+{
+	public static function Query($query = null)
+	{
+		static $db = null;
+		static $result = array();
+
+		try
+		{
+			if (isset($db, $query) === true)
 			{
-				if ((is_array($attributes = (array) $attributes) === true) && (ksort($attributes) === true))
+				if (empty($result[$hash = crc32($query)]) === true)
 				{
-					$id = implode('|', array_map('md5', array($sku, json_encode($attributes))));
+					$result[$hash] = $db->prepare($query);
+				}
 
-					foreach (array('sku', 'name', 'price', 'quantity', 'attributes') as $value)
+				$data = array_slice(func_get_args(), 1);
+
+				if (count($data, COUNT_RECURSIVE) > count($data))
+				{
+					$data = iterator_to_array(new \RecursiveIteratorIterator(new \RecursiveArrayIterator($data)), false);
+				}
+
+				if ($result[$hash]->execute($data) === true)
+				{
+					$sequence = null;
+
+					if ((strncmp('pgsql', $db->getAttribute(\PDO::ATTR_DRIVER_NAME), 5) === 0) && (sscanf($query, 'INSERT INTO %s', $sequence) > 0))
 					{
-						$_SESSION[__METHOD__][$id][$value] = $$value;
+						$sequence = sprintf('%s_id_seq', trim($sequence, '`'));
 					}
-				}
-			}
 
-			else if (array_key_exists($id, $_SESSION[__METHOD__]) === true)
-			{
-				if (($_SESSION[__METHOD__][$id]['quantity'] = intval($quantity)) <= 0)
-				{
-					$_SESSION[__METHOD__][$id] = null;
-				}
-			}
-
-			if ((count($_SESSION[__METHOD__] = array_filter($_SESSION[__METHOD__], 'count')) > 1) && (ksort($_SESSION[__METHOD__]) === true))
-			{
-				return $_SESSION[__METHOD__];
-			}
-		}
-
-		return array();
-	}
-
-	public static function Code($code = 200, $string = null, $replace = true)
-	{
-		if ((headers_sent() !== true) && (strcmp('cli', PHP_SAPI) !== 0))
-		{
-			$result = 'Status:';
-
-			if (strncmp('cgi', PHP_SAPI, 3) !== 0)
-			{
-				$result = parent::Value($_SERVER, 'SERVER_PROTOCOL');
-			}
-
-			header(rtrim(sprintf('%s %03u %s', $result, $code, $string)), $replace, $code);
-		}
-	}
-
-	public static function Cookie($key, $value = null, $expire = null, $http = true)
-	{
-		if (isset($value) === true)
-		{
-			if (is_array($key) === true)
-			{
-				$key = preg_replace('~[[](.*?)[]]~', '$1', sprintf('[%s]', implode('][', $key)), 1);
-			}
-
-			return (headers_sent() !== true) ? setcookie($key, strval($value), intval($expire), '/', null, self::Secure(), $http) : false;
-		}
-
-		return parent::Value($_COOKIE, $key);
-	}
-
-	public static function FirePHP($message, $label = null, $type = 'LOG')
-	{
-		static $i = 0;
-
-		if ((headers_sent() !== true) && (strcmp('cli', PHP_SAPI) !== 0))
-		{
-			$type = (in_array($type, array('LOG', 'INFO', 'WARN', 'ERROR')) === true) ? $type : 'LOG';
-
-			if (strpos(parent::Value($_SERVER, 'HTTP_USER_AGENT'), 'FirePHP') !== false)
-			{
-				$message = json_encode(array(array('Type' => $type, 'Label' => $label), $message));
-
-				if ($i == 0)
-				{
-					header('X-Wf-Protocol-1: http://meta.wildfirehq.org/Protocol/JsonStream/0.2');
-					header('X-Wf-1-Plugin-1: http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.3');
-					header('X-Wf-1-Structure-1: http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1');
-				}
-
-				header('X-Wf-1-1-1-' . ++$i . ': ' . strlen($message) . '|' . $message . '|');
-			}
-		}
-	}
-
-	public static function Flush($buffer = null)
-	{
-		echo $buffer;
-
-		while (ob_get_level() > 0)
-		{
-			ob_end_flush();
-		}
-
-		flush();
-	}
-
-	public static function IP($ip = null, $proxy = false)
-	{
-		if (isset($ip) === true)
-		{
-			return (ph()->Is->IP($ip) === true) ? $ip : self::IP(null, $proxy);
-		}
-
-		else if ($proxy === true)
-		{
-			foreach (array('HTTP_CLIENT_IP', 'HTTP_FORWARDED', 'HTTP_FORWARDED_FOR', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_X_FORWARDED', 'HTTP_X_FORWARDED_FOR') as $key)
-			{
-				foreach (array_map('trim', explode(',', parent::Value($_SERVER, $key))) as $value)
-				{
-					if (ph()->Is->IP($value) === true)
+					switch (strstr($query, ' ', true))
 					{
-						return $value;
+						case 'INSERT':
+						case 'REPLACE':
+							return $db->lastInsertId($sequence);
+
+						case 'UPDATE':
+						case 'DELETE':
+							return $result[$hash]->rowCount();
+
+						case 'SELECT':
+						case 'EXPLAIN':
+						case 'PRAGMA':
+						case 'SHOW':
+							return $result[$hash]->fetchAll();
 					}
-				}
-			}
-		}
 
-		return parent::Value($_SERVER, 'REMOTE_ADDR', '127.0.0.1');
-	}
-
-	public static function JSON($data, $callback = null, $whitespace = false)
-	{
-		$options = 0;
-
-		if (($whitespace === true) && (defined('JSON_PRETTY_PRINT') === true))
-		{
-			$options += constant('JSON_PRETTY_PRINT');
-		}
-
-		if (is_string($data = json_encode($data, $options)) === true)
-		{
-			$callback = preg_replace('~[^[:alnum:]\[\]_.]~', '', $callback);
-
-			if ((headers_sent() !== true) && (strcmp('cli', PHP_SAPI) !== 0))
-			{
-				header(sprintf('Content-Type: %s/%s', 'application', (empty($callback) === true) ? 'json' : 'javascript'));
-			}
-
-			self::Flush(preg_replace('~^[(](.+)[)];$~s', '$1', sprintf('%s(%s);', $callback, $data)));
-		}
-
-		exit();
-	}
-
-	public static function Method($method, $ajax = false)
-	{
-		if (in_array(parent::Value($_SERVER, 'REQUEST_METHOD', 'GET'), array_map('strtoupper', (array) $method)) === true)
-		{
-			if ($ajax === true)
-			{
-				return (strcasecmp('XMLHttpRequest', parent::Value($_SERVER, 'HTTP_X_REQUESTED_WITH')) === 0);
-			}
-
-			return true;
-		}
-
-		return false;
-	}
-
-	public static function Note($key, $value = null, $type = null)
-	{
-		if (is_null($value) === true)
-		{
-			if (isset($key) === true)
-			{
-				$result = self::Cookie(array(__METHOD__, (empty($type) === true) ? 0 : $type, $key));
-
-				if ($result !== false)
-				{
-					self::Cookie(array(__METHOD__, (empty($type) === true) ? 0 : $type, $key), false);
-				}
-
-				return (is_bool($result) === true) ? $result : json_decode($result);
-			}
-
-			return array_keys(self::Cookie(array(__METHOD__, (empty($type) === true) ? 0 : $type)));
-		}
-
-		return self::Cookie(array(__METHOD__, (empty($type) === true) ? 0 : $type, $key), json_encode($value));
-	}
-
-	public static function Secure()
-	{
-		if (empty($_SERVER['HTTPS']) === true)
-		{
-			foreach (array('HTTP_X_FORWARDED_PROTO', 'HTTP_X_ORCHESTRA_SCHEME') as $key)
-			{
-				if (strcasecmp('https', parent::Value($_SERVER, $key)) === 0)
-				{
 					return true;
 				}
+
+				return false;
 			}
 
+			else if (isset($query) === true)
+			{
+				$options = array
+				(
+					\PDO::ATTR_CASE => \PDO::CASE_NATURAL,
+					\PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+					\PDO::ATTR_EMULATE_PREPARES => false,
+					\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+					\PDO::ATTR_ORACLE_NULLS => \PDO::NULL_NATURAL,
+					\PDO::ATTR_STRINGIFY_FETCHES => false,
+				);
+
+				if (preg_match('~^sqlite://([[:print:]]++)$~i', $query, $dsn) > 0)
+				{
+					$options += array
+					(
+						\PDO::ATTR_TIMEOUT => 3,
+					);
+
+					$db = new \PDO(sprintf('sqlite:%s', $dsn[1]), null, null, $options);
+					$pragmas = array
+					(
+						'automatic_index' => 'ON',
+						'cache_size' => '8192',
+						'foreign_keys' => 'ON',
+						'journal_size_limit' => '67110000',
+						'locking_mode' => 'NORMAL',
+						'page_size' => '4096',
+						'recursive_triggers' => 'ON',
+						'secure_delete' => 'ON',
+						'synchronous' => 'NORMAL',
+						'temp_store' => 'MEMORY',
+						'journal_mode' => 'WAL',
+						'wal_autocheckpoint' => '4096',
+					);
+
+					if (strncasecmp('WIN', PHP_OS, 3) !== 0)
+					{
+						$memory = 131072;
+ 
+						if (($page = intval(shell_exec('getconf PAGESIZE'))) > 0)
+						{
+							$pragmas['page_size'] = $page;
+						}
+ 
+						if (is_readable('/proc/meminfo') === true)
+						{
+							if (is_resource($handle = fopen('/proc/meminfo', 'rb')) === true)
+							{
+								while (($line = fgets($handle, 1024)) !== false)
+								{
+									if (sscanf($line, 'MemTotal: %d kB', $memory) == 1)
+									{
+										$memory = round($memory / 131072) * 131072; break;
+									}
+								}
+ 
+								fclose($handle);
+							}
+						}
+ 
+						$pragmas['cache_size'] = intval($memory * 0.25 / ($pragmas['page_size'] / 1024));
+						$pragmas['wal_autocheckpoint'] = $pragmas['cache_size'] / 2;
+					}
+
+					foreach ($pragmas as $key => $value)
+					{
+						$db->exec(sprintf('PRAGMA %s=%s;', $key, $value));
+					}
+				}
+
+				else if (preg_match('~^(mysql|pgsql)://(?:(.+?)(?::(.+?))?@)?([^/:@]++)(?::(\d++))?/(\w++)/?$~i', $query, $dsn) > 0)
+				{
+					$options += array
+					(
+						\PDO::ATTR_AUTOCOMMIT => true,
+					);
+
+					if (strncasecmp('mysql', $query, 5) === 0)
+					{
+						$options += array
+						(
+							\PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES "utf8" COLLATE "utf8_general_ci", time_zone = "+00:00";',
+							\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
+						);
+					}
+
+					$db = new \PDO(sprintf('%s:host=%s;port=%s;dbname=%s', $dsn[1], $dsn[4], $dsn[5], $dsn[6]), $dsn[2], $dsn[3], $options);
+				}
+			}
+		}
+
+		catch (\Exception $e)
+		{
 			return false;
 		}
 
-		return true;
+		return (isset($db) === true) ? $db : false;
 	}
 
-	public static function Sleep($time = 1)
+	public static function Reply($data)
 	{
-		return usleep(intval(floatval($time) * 1000000));
-	}
+		$bitmask = 0;
+		$options = array('UNESCAPED_SLASHES', 'UNESCAPED_UNICODE');
 
-	public static function Token($key, $value = null)
-	{
-		if (strlen(session_id()) > 0)
+		if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) === true)
 		{
-			$result = parent::Value($_SESSION, array(__METHOD__, $key), null);
-
-			if ((is_null($result) === true) || ((isset($value) === true) && (strcmp($value, $result) !== 0)))
-			{
-				return $_SESSION[__METHOD__][$key] = sha1(uniqid(mt_rand(), true));
-			}
-
-			return (isset($value) === true) ? true : $result;
+			$options[] = 'PRETTY_PRINT';
 		}
 
-		return false;
-	}
-
-	public static function Version($version = null)
-	{
-		if (($result = parent::Value($_SERVER, 'SERVER_PROTOCOL')) !== false)
+		foreach ($options as $option)
 		{
-			$result = ltrim(strstr($result, '/'), '/');
-
-			if (isset($version) === true)
+			if (defined('JSON_' . $option) === true)
 			{
-				return version_compare($result, $version, '>=');
+				$bitmask |= constant('JSON_' . $option);
+			}
+		}
+
+		if (($result = json_encode($data, $bitmask)) !== false)
+		{
+			$callback = null;
+
+			if (array_key_exists('callback', $_GET) === true)
+			{
+				$callback = trim(preg_replace('~[^[:alnum:]\[\]_.]~', '', $_GET['callback']));
+
+				if (empty($callback) !== true)
+				{
+					$result = sprintf('%s(%s);', $callback, $result);
+				}
+			}
+
+			if (headers_sent() !== true)
+			{
+				header(sprintf('Content-Type: application/%s; charset=utf-8', (empty($callback) === true) ? 'json' : 'javascript'));
 			}
 		}
 
 		return $result;
+	}
+
+	public static function Serve($on = null, $route = null, $callback = null)
+	{
+		static $root = null;
+
+		if (isset($_SERVER['REQUEST_METHOD']) !== true)
+		{
+			$_SERVER['REQUEST_METHOD'] = 'CLI';
+		}
+
+		if ((empty($on) === true) || (strcasecmp($on, $_SERVER['REQUEST_METHOD']) === 0))
+		{
+			if (is_null($root) === true)
+			{
+				$root = preg_replace('~/++~', '/', substr($_SERVER['PHP_SELF'], strlen($_SERVER['SCRIPT_NAME'])) . '/');
+			}
+
+			if (preg_match('~^' . str_replace(array('#any', '#num'), array('[^/]++', '[0-9]++'), $route) . '~i', $root, $parts) > 0)
+			{
+				return (empty($callback) === true) ? true : exit(call_user_func_array($callback, array_slice($parts, 1)));
+			}
+		}
+
+		return false;
 	}
 }
